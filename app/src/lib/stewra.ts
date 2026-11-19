@@ -5,7 +5,7 @@ import type { Verd } from "@/idl/verd";
 
 export const CLUSTER = process.env.NEXT_PUBLIC_CLUSTER || "localnet";
 export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8899";
-/** Base URL of the Verd backend (Railway). */
+/** Base URL of the Stewra backend (Railway). */
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/$/, "");
 export const api = (path: string) => `${API_URL}${path}`;
 
@@ -233,4 +233,4 @@ export function explorerTx(sig: string) {
 
 /** Message the creator signs to prove they own a launch when saving its profile. */
 export const profileMessage = (launch: string, digest: string) =>
-  `Verd: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;
+  `Stewra: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;

@@ -1,4 +1,4 @@
-//! Verd — an IPO-style launchpad for AI agents on Solana.
+//! Stewra — an IPO-style launchpad for AI agents on Solana.
 //!
 //! Lifecycle of a listing:
 //!   1. `create_launch`  – creator files the listing (price range, supply, lockup).

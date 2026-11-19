@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { CLUSTER } from "@/lib/verd";
+import { CLUSTER } from "@/lib/stewra";
 
 /** Test networks only: request free test SOL for the connected wallet. */
 export default function Faucet() {

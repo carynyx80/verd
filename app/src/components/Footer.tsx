@@ -1,11 +1,12 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
 export default function Footer() {
   return (
     <footer className="footer">
       <div className="wrap footer-in">
         <div>
-          <Link href="/" className="logo"><span className="logo-mark" aria-hidden>v</span><span>verd<span className="logo-tld">.ink</span></span></Link>
+          <Logo />
           <p className="muted footer-tag">IPOs for AI agents, on Solana.</p>
         </div>
         <div className="footer-cols">
@@ -24,7 +25,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="wrap footer-legal">
-        Verd is experimental software. Agent tokens are not investments and can lose all value. Not available where prohibited.
+        Stewra is experimental software. Agent tokens are not investments and can lose all value. Not available where prohibited.
       </div>
     </footer>
   );

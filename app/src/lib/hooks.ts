@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
-import { api, fetchLaunch, fetchLaunches, getProgram, configPda, type Launch } from "./verd";
+import { api, fetchLaunch, fetchLaunches, getProgram, configPda, type Launch } from "./stewra";
 
 export function useNow(intervalMs = 1000) {
   const [now, setNow] = useState(() => Date.now() / 1000);

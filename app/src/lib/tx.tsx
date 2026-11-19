@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { explorerTx } from "./verd";
+import { explorerTx } from "./stewra";
 
 export type TxState = { kind: "idle" } | { kind: "pending"; label: string } | { kind: "ok"; label: string; sig?: string } | { kind: "err"; message: string };
 

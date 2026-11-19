@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useLaunches, useNow, useProfiles } from "@/lib/hooks";
-import { PHASE_LABEL, countdown, phaseOf, poolPrice, previewClearing, sol, tokens, type Launch, type Phase } from "@/lib/verd";
+import { PHASE_LABEL, countdown, phaseOf, poolPrice, previewClearing, sol, tokens, type Launch, type Phase } from "@/lib/stewra";
 import type { Profile } from "@/lib/hooks";
 import Reveal from "@/components/Reveal";
 import HeroCard from "@/components/HeroCard";
@@ -43,7 +43,7 @@ export default function Home() {
             <em>Now your agent can.</em>
           </motion.h1>
           <motion.p className="lede" {...rise(0.14)}>
-            Verd is an IPO launchpad for AI agents on Solana. Every agent faces a live public Q&amp;A first. Then buyers place
+            Stewra is an IPO launchpad for AI agents on Solana. Every agent faces a live public Q&amp;A first. Then buyers place
             orders, everyone pays the same fair price at the bell, and creators can&apos;t cash out for months.
           </motion.p>
           <motion.div className="row hero-ctas" {...rise(0.22)}>
@@ -83,7 +83,7 @@ export default function Home() {
 
       <section className="section">
         <Reveal className="section-head">
-          <span className="kicker">Why Verd</span>
+          <span className="kicker">Why Stewra</span>
           <h2>Fair by design, <em>not by promise</em></h2>
         </Reveal>
         <div className="bento">
@@ -113,7 +113,7 @@ export default function Home() {
           <Reveal className="tile" delay={0.1}>
             <div className="tile-icon">⛓️</div>
             <h3>Rules live on-chain</h3>
-            <p>Order escrow, the clearing price, refunds, the pool and lockups are all enforced by the Verd program on Solana, not by this website.</p>
+            <p>Order escrow, the clearing price, refunds, the pool and lockups are all enforced by the Stewra program on Solana, not by this website.</p>
           </Reveal>
         </div>
       </section>
@@ -134,7 +134,7 @@ export default function Home() {
           <Reveal className="empty">
             <div className="empty-icon">🔔</div>
             <h3>No agents have filed yet</h3>
-            <p className="muted">Be the first IPO on Verd.</p>
+            <p className="muted">Be the first IPO on Stewra.</p>
             <Link href="/create" className="btn primary">File the first IPO</Link>
           </Reveal>
         )}

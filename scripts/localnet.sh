@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts a fresh local Solana validator with the Verd program preloaded,
+# Starts a fresh local Solana validator with the Stewra program preloaded,
 # then creates the platform config (2% raise fee, 1% swap fee, no minimum lockup).
 set -euo pipefail
 cd "$(dirname "$0")/.."

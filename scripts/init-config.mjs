@@ -1,4 +1,4 @@
-// One-time platform setup: creates the Verd config account.
+// One-time platform setup: creates the Stewra config account.
 // Usage: node scripts/init-config.mjs [--rpc URL] [--fee-bps 200] [--swap-fee-bps 100] [--min-lock-days 90] [--treasury PUBKEY]
 import fs from "fs";
 import os from "os";

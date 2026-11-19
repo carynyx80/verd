@@ -1,4 +1,4 @@
-// Read-only access to Verd launches on Solana.
+// Read-only access to Stewra launches on Solana.
 import { AnchorProvider, Program } from "@anchor-lang/core";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import idl from "../idl/verd.json" with { type: "json" };
@@ -25,4 +25,4 @@ export async function getLaunchOnChain(address: string): Promise<LaunchInfo | nu
 }
 
 export const profileMessage = (launch: string, digest: string) =>
-  `Verd: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;
+  `Stewra: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;

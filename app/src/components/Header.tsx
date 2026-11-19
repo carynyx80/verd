@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
-import { CLUSTER } from "@/lib/verd";
+import { CLUSTER } from "@/lib/stewra";
 import Faucet from "./Faucet";
+import Logo from "./Logo";
 
 const WalletMultiButton = dynamic(
   async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
@@ -34,10 +35,7 @@ export default function Header() {
   return (
     <header className={`nav ${scrolled ? "nav-scrolled" : ""}`}>
       <div className="nav-pill">
-        <Link href="/" className="logo" aria-label="Verd home">
-          <span className="logo-mark" aria-hidden>v</span>
-          <span>verd<span className="logo-tld">.ink</span></span>
-        </Link>
+        <Logo />
         <nav className="nav-links">
           {LINKS.map((l) => (
             <Link key={l.href} href={l.href} className={path === l.href ? "on" : ""}>{l.label}</Link>

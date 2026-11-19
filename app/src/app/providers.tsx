@@ -3,7 +3,7 @@ import { useMemo, type ReactNode } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { UnsafeBurnerWalletAdapter } from "@solana/wallet-adapter-unsafe-burner";
-import { CLUSTER, RPC_URL } from "@/lib/verd";
+import { CLUSTER, RPC_URL } from "@/lib/stewra";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export default function Providers({ children }: { children: ReactNode }) {

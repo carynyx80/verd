@@ -8,7 +8,7 @@ import { Verd } from "../target/types/verd";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const ONE = 1_000_000; // token base units
 
-describe("verd: full agent IPO lifecycle", () => {
+describe("stewra: full agent IPO lifecycle", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.verd as Program<Verd>;

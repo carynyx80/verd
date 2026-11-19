@@ -5,7 +5,7 @@ import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapte
 import { BN } from "@anchor-lang/core";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useConfig } from "@/lib/hooks";
-import { CLUSTER, ONE_TOKEN, api, getProgram, launchPda } from "@/lib/verd";
+import { CLUSTER, ONE_TOKEN, api, getProgram, launchPda } from "@/lib/stewra";
 import { publishProfile } from "@/lib/publish";
 import { TxNote, useTx } from "@/lib/tx";
 import Prospectus from "@/components/Prospectus";
@@ -77,7 +77,7 @@ export default function CreatePage() {
 
   function validate(): string | null {
     if (!wallet) return "Connect your wallet first.";
-    if (!config) return "Verd isn't set up on this network yet (missing platform config).";
+    if (!config) return "Stewra isn't set up on this network yet (missing platform config).";
     if (!f.name.trim() || f.name.length > 32) return "Name must be 1–32 characters.";
     if (!/^[A-Za-z0-9]{1,10}$/.test(f.symbol)) return "Ticker must be 1–10 letters or numbers.";
     if (!f.tagline.trim() || f.description.trim().length < 10) return "Add a tagline and a description.";
@@ -143,7 +143,7 @@ export default function CreatePage() {
     <div className="stack" style={{ padding: "28px 0" }}>
       <div>
         <h1 style={{ margin: "0 0 6px", letterSpacing: "-.8px" }}>File your agent&apos;s IPO</h1>
-        <p className="muted" style={{ margin: 0 }}>Takes a few minutes. Everything about the sale is enforced by the Verd program on Solana.</p>
+        <p className="muted" style={{ margin: 0 }}>Takes a few minutes. Everything about the sale is enforced by the Stewra program on Solana.</p>
       </div>
 
       <div className="grid2">
@@ -160,7 +160,7 @@ export default function CreatePage() {
             <div className="field full">
               <label>Personality for the live Q&amp;A</label>
               <textarea value={f.persona} onChange={set("persona")} maxLength={2000} placeholder="How should your agent talk and answer questions in its roadshow? e.g. Confident, concise, likes showing quick demos." />
-              <span className="hint">The roadshow agent follows this, plus Verd&apos;s honesty rules (no promises of profit).</span>
+              <span className="hint">The roadshow agent follows this, plus Stewra&apos;s honesty rules (no promises of profit).</span>
             </div>
             <div className="field"><label>Website (optional)</label><input value={f.website} onChange={set("website")} placeholder="https://" /></div>
             <div className="field">

@@ -10,7 +10,7 @@ import { useConfig, useLaunch, useNow, type PlatformConfig, type Profile } from 
 import {
   NUM_TICKS, ONE_TOKEN, PHASE_LABEL, api, allocationFor, countdown, demandCurve, getProgram, orderPda, phaseOf,
   poolPrice, previewClearing, quoteSwap, short, sol, tickPrice, tokens, type Launch,
-} from "@/lib/verd";
+} from "@/lib/stewra";
 import { TxNote, useTx } from "@/lib/tx";
 import { publishProfile } from "@/lib/publish";
 import Prospectus from "@/components/Prospectus";
@@ -302,7 +302,7 @@ function OrderPanel({ launch, order, onChange }: { launch: Launch; order: Order 
           <div><small>Max price</small><b>{sol(tickPrice(launch, order.maxTick), 6)}</b></div>
         </div>
         <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-          Your SOL is held by the Verd program until the bell. Anything not used is refunded. You can cancel any time before the book closes.
+          Your SOL is held by the Stewra program until the bell. Anything not used is refunded. You can cancel any time before the book closes.
         </p>
         <button className="btn" disabled={tx.state.kind === "pending"} onClick={async () => {
           if (await tx.run("Cancelling", () => program!.methods.cancelOrder().accounts({ launch: new PublicKey(launch.address), buyer: wallet!.publicKey } as never).rpc(), "Order cancelled, SOL refunded")) await onChange();

@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import Reveal from "@/components/Reveal";
-import { CLUSTER } from "@/lib/verd";
+import { CLUSTER } from "@/lib/stewra";
 
 type Step = { t: string; d: React.ReactNode; tip?: string };
 
@@ -16,11 +16,11 @@ const SETUP: Step[] = [
     t: CLUSTER === "mainnet-beta" ? "Add some SOL" : "Switch your wallet to Devnet",
     d: CLUSTER === "mainnet-beta"
       ? <>You need a little SOL to place orders and pay network fees, which are tiny.</>
-      : <>Verd is running on Solana&apos;s test network right now. In your wallet&apos;s settings, turn on <b>Testnet mode</b> and choose <b>Devnet</b>.</>,
+      : <>Stewra is running on Solana&apos;s test network right now. In your wallet&apos;s settings, turn on <b>Testnet mode</b> and choose <b>Devnet</b>.</>,
     tip: CLUSTER === "mainnet-beta" ? undefined : "Test SOL is free and has no real value.",
   },
   {
-    t: "Connect to Verd",
+    t: "Connect to Stewra",
     d: <>Click <b>Select Wallet</b> in the top right and approve the connection.{CLUSTER !== "mainnet-beta" && <> Then press <b>Get test SOL</b> to fund your wallet.</>}</>,
   },
 ];
@@ -28,7 +28,7 @@ const SETUP: Step[] = [
 const BUYER: Step[] = [
   { t: "Pick an agent", d: <>Browse the <Link href="/#listings">listings</Link>. Each card shows its stage: <b>Roadshow</b>, <b>Book open</b>, <b>Bell ready</b> or <b>Trading</b>.</> },
   { t: "Test it in the roadshow", d: <>Ask the agent anything in the live Q&amp;A: what it does, how it makes money, or ask for a quick demo. Everyone can read every answer.</>, tip: "Read the prospectus too. It lists the risks." },
-  { t: "Place your order", d: <>When the book opens, enter how much SOL you want to spend and the <b>most you&apos;ll pay per token</b>. Your SOL is held safely by the Verd program until the bell.</>, tip: "You can cancel and get everything back any time before the book closes." },
+  { t: "Place your order", d: <>When the book opens, enter how much SOL you want to spend and the <b>most you&apos;ll pay per token</b>. Your SOL is held safely by the Stewra program until the bell.</>, tip: "You can cancel and get everything back any time before the book closes." },
   { t: "Wait for the bell", d: <>When the book closes, anyone can ring the bell. Everyone pays the <b>same price</b>. If more people wanted in than there are tokens, everyone gets a fair share and the rest of their SOL back.</> },
   { t: "Claim", d: <>Open the agent&apos;s page and press <b>Claim</b>. Your tokens and any refund go straight to your wallet. If the final price was above your max, you get a full refund.</> },
   { t: "Trade any time", d: <>Trading opens the moment the bell rings. Use the <b>Buy</b> and <b>Sell</b> panel on the agent&apos;s page.</> },
@@ -57,7 +57,7 @@ const FAQ: [string, string][] = [
   ["Can bots buy before me?", "No. Orders don't fill one by one. They all fill together at the bell, at the same price."],
   ["What if I change my mind?", "Cancel your order any time before the book closes and get all your SOL back."],
   ["What if the agent doesn't sell out?", "Everyone who ordered gets filled in full at the minimum price."],
-  ["Who holds my SOL during the book?", "The Verd program on Solana, not a person. It can only send it back to you or use it for your allocation."],
+  ["Who holds my SOL during the book?", "The Stewra program on Solana, not a person. It can only send it back to you or use it for your allocation."],
   ["Are agent tokens investments?", "No. They're experimental and can lose all value. Only spend what you can afford to lose."],
 ];
 
@@ -70,7 +70,7 @@ export default function HowToUse() {
     <div className="guide">
       <Reveal className="guide-hero">
         <span className="kicker">How to use</span>
-        <h1>Verd, <em>step by step</em></h1>
+        <h1>Stewra, <em>step by step</em></h1>
         <p className="lede">Everything you need to back an agent&apos;s IPO or take your own agent public, in plain language.</p>
       </Reveal>
 

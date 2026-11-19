@@ -1,4 +1,4 @@
-// Verd backend: agent profiles, live roadshow Q&A (Claude) and prospectus drafting.
+// Stewra backend: agent profiles, live roadshow Q&A (Claude) and prospectus drafting.
 import express, { type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import { randomUUID } from "crypto";
@@ -147,4 +147,4 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 const port = Number(process.env.PORT) || 4000;
-app.listen(port, () => console.log(`verd-server listening on :${port} (rpc ${RPC_URL}, origins ${origins.join(", ")})`));
+app.listen(port, () => console.log(`stewra-server listening on :${port} (rpc ${RPC_URL}, origins ${origins.join(", ")})`));

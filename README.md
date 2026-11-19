@@ -1,8 +1,8 @@
-# Verd: IPOs for AI agents on Solana
+# Stewra: IPOs for AI agents on Solana
 
 > Anthropic went public. Now your agent can.
 
-Verd is a launchpad where AI agents "go public" the way a company does:
+Stewra is a launchpad where AI agents "go public" the way a company does:
 
 1. **Filing**: the creator lists the agent with a prospectus, price range, supply and creator lockup.
 2. **Roadshow**: anyone can question the agent live (powered by Claude) before orders open.
@@ -18,7 +18,7 @@ All of the sale rules are enforced by the on-chain program, not by the website.
 ```
 programs/verd/src/lib.rs   On-chain program (Anchor): auction, escrow, bell, claims, pool, lockups
 tests/verd.ts              Full-lifecycle tests on a local validator (11 tests)
-scripts/localnet.sh        Starts a local validator with Verd loaded and sets up the platform
+scripts/localnet.sh        Starts a local validator with Stewra loaded and sets up the platform
 scripts/init-config.mjs    One-time platform setup on any network (fees, treasury, minimum lockup)
 scripts/sim-orders.mjs     Dev helper: places orders from test wallets
 app/                       Frontend (Next.js, deployed on Vercel): listings, filing, roadshow, order book, bell, trading
@@ -49,7 +49,7 @@ anchor build
 anchor test
 ```
 
-Start a local chain with Verd deployed (keep this running):
+Start a local chain with Stewra deployed (keep this running):
 
 ```bash
 ./scripts/localnet.sh
@@ -112,8 +112,8 @@ Then set `NEXT_PUBLIC_CLUSTER=devnet` and `NEXT_PUBLIC_RPC_URL=https://api.devne
 
 ## Hosting
 
-- **Frontend → Vercel** (project `verd`, root directory `app`). Deploys automatically on every push to `main`.
-- **Backend → Railway** (project `verd`, service `verd-server`, root directory `/server`, volume mounted at `/data`). Deploys automatically on pushes that touch `server/`.
+- **Frontend → Vercel** (project `stewra`, root directory `app`). Deploys automatically on every push to `main`.
+- **Backend → Railway** (project `stewra`, service `stewra-server`, root directory `/server`, volume mounted at `/data`). Deploys automatically on pushes that touch `server/`.
 
 ## Configuration
 
@@ -121,12 +121,16 @@ Then set `NEXT_PUBLIC_CLUSTER=devnet` and `NEXT_PUBLIC_RPC_URL=https://api.devne
 |---|---|---|
 | `NEXT_PUBLIC_CLUSTER` | Vercel | `localnet`, `devnet` or `mainnet-beta` |
 | `NEXT_PUBLIC_RPC_URL` | Vercel | Solana RPC endpoint |
-| `NEXT_PUBLIC_PROGRAM_ID` | Vercel | Deployed Verd program id |
+| `NEXT_PUBLIC_PROGRAM_ID` | Vercel | Deployed Stewra program id |
 | `NEXT_PUBLIC_API_URL` | Vercel | Backend URL (the Railway domain) |
 | `ANTHROPIC_API_KEY` | Railway | Claude API key for roadshow Q&A and prospectus drafts |
 | `RPC_URL` | Railway | Solana RPC endpoint the backend reads launches from |
-| `PROGRAM_ID` | Railway | Deployed Verd program id |
+| `PROGRAM_ID` | Railway | Deployed Stewra program id |
 | `CORS_ORIGINS` | Railway | Comma-separated frontend URLs allowed to call the API |
 | `DATA_DIR` | Railway | Where profiles and transcripts are stored (`/data` volume) |
 
 Program id (local and default): `3ty1t4idNWNRgVFzwoTqYKZBz2SLTaLtYv6WbGEe3nzN`. For your own deployment, generate a new keypair with `solana-keygen new -o target/deploy/verd-keypair.json`, then run `anchor keys sync` and `anchor build`.
+
+## Naming note
+
+The product is **Stewra**. The on-chain program keeps its original internal name `verd` (folder `programs/verd`, files `target/deploy/verd.so` and `verd-keypair.json`, IDL `verd.json`) so it stays at the same address without redeploying. Users never see this name.

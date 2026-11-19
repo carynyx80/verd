@@ -1,7 +1,7 @@
 "use client";
 import bs58 from "bs58";
 import { profileDigest, type ProfileFields } from "./digest";
-import { api, profileMessage } from "./verd";
+import { api, profileMessage } from "./stewra";
 
 /** Creator signs the exact profile content; the server checks it against the on-chain creator. */
 export async function publishProfile(
