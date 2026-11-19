@@ -8,6 +8,8 @@ export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8899
 /** Base URL of the Stewra backend (Railway). */
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/$/, "");
 export const api = (path: string) => `${API_URL}${path}`;
+/** Public URL of an uploaded image (logo or banner). */
+export const imageUrl = (id: string) => `${API_URL}/uploads/${id}`;
 
 export const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID || (idl as { address: string }).address);
 

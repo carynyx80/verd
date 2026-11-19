@@ -513,3 +513,34 @@ h3 { font-size: 14px; margin: 0 0 10px; }
 .sum-cta { width: calc(100% - 32px); margin: 4px 16px 0; height: 38px; }
 .sum .note { margin: 10px 16px 0; }
 .sum-foot { margin: 0; padding: 12px 16px 16px; font-size: 12px; color: var(--dim); line-height: 1.5; }
+
+/* ── image uploads ── */
+.up { display: grid; gap: 8px; }
+.up-logo { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 16px; }
+.up-logo .up-err { grid-column: 1 / -1; }
+.up-drop {
+  position: relative; display: grid; place-items: center; overflow: hidden; cursor: pointer;
+  border: 1px dashed var(--line-3); border-radius: var(--r-lg); background: var(--bg); color: var(--dim);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.up-drop:hover, .up-drop:focus-visible, .up-drop.over { border-color: var(--text-2); color: var(--text-2); background: var(--bg-2); outline: none; }
+.up-drop.has { border-style: solid; border-color: var(--line-2); }
+.up-logo .up-drop { width: 72px; height: 72px; }
+.up-banner .up-drop { width: 100%; aspect-ratio: 3 / 1; }
+.up-drop img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.up-empty { display: grid; justify-items: center; gap: 8px; font-size: 12.5px; }
+.up-busy { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10, 10, 10, 0.75); color: var(--text); font-size: 12px; }
+.up-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.up-logo .up-meta { flex-direction: column; align-items: flex-start; gap: 8px; }
+.up-actions { display: flex; gap: 6px; }
+.up-err { font-size: 12.5px; color: var(--red); }
+
+.avatar.has-img { padding: 0; overflow: hidden; background: var(--surface-3); }
+.avatar.has-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.sum-banner { display: block; width: 100%; aspect-ratio: 3 / 1; object-fit: cover; border-bottom: 1px solid var(--line); }
+
+.lbanner { display: block; width: 100%; aspect-ratio: 3 / 1; max-height: 280px; object-fit: cover; border-radius: var(--r-lg); border: 1px solid var(--line); margin-top: 20px; }
+.lhead-overlap { padding-top: 0; }
+.lhead-overlap .avatar { margin-top: -28px; border: 3px solid var(--bg); width: 72px; height: 72px; border-radius: 16px; position: relative; }
+@media (max-width: 640px) { .lbanner { aspect-ratio: 2 / 1; } .lhead-overlap .avatar { margin-top: -22px; width: 60px; height: 60px; } }

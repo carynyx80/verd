@@ -18,6 +18,8 @@ export type AgentProfile = {
   prospectus: string;
   website?: string;
   emoji: string;
+  logo?: string; // uploaded image id
+  banner?: string; // uploaded image id
   createdAt: number;
 };
 

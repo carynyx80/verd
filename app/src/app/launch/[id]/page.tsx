@@ -8,12 +8,14 @@ import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { useConfig, useLaunch, useNow, type PlatformConfig, type Profile } from "@/lib/hooks";
 import {
-  NUM_TICKS, ONE_TOKEN, PHASE_LABEL, api, allocationFor, countdown, demandCurve, getProgram, orderPda, phaseOf,
+  NUM_TICKS, ONE_TOKEN, PHASE_LABEL, api, imageUrl, allocationFor, countdown, demandCurve, getProgram, orderPda, phaseOf,
   poolPrice, previewClearing, quoteSwap, short, sol, tickPrice, tokens, type Launch,
 } from "@/lib/stewra";
 import { TxNote, useTx } from "@/lib/tx";
 import { publishProfile } from "@/lib/publish";
 import Prospectus from "@/components/Prospectus";
+import AgentAvatar from "@/components/AgentAvatar";
+import ImageUpload from "@/components/ImageUpload";
 
 type Order = { budget: number; maxTick: number; placedAt: number };
 type Entry = { id: string; question: string; answer: string; asker?: string; at: number };
@@ -51,8 +53,12 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <>
-      <div className="lhead">
-        <div className="avatar">{profile?.emoji ?? "🤖"}</div>
+      {profile?.banner && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="lbanner" src={imageUrl(profile.banner)} alt="" />
+      )}
+      <div className={`lhead ${profile?.banner ? "lhead-overlap" : ""}`}>
+        <AgentAvatar logo={profile?.logo} emoji={profile?.emoji} />
         <div>
           <div className="row" style={{ gap: 10 }}>
             <h1>{launch.name}</h1>
@@ -190,13 +196,15 @@ function Roadshow({ launch, profile, phase }: { launch: Launch; profile: Profile
 function ProfileForm({ launch, onSaved }: { launch: Launch; onSaved: () => void }) {
   const { signMessage } = useWallet();
   const tx = useTx();
-  const [f, setF] = useState({ tagline: "", description: "", persona: "", prospectus: "", website: "", emoji: "🤖" });
+  const [f, setF] = useState({ tagline: "", description: "", persona: "", prospectus: "", website: "", emoji: "🤖", logo: "", banner: "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const search = useSearchParams();
   return (
     <div className="panel stack">
       <h2 style={{ margin: 0 }}>Publish your agent&apos;s profile</h2>
       {search.get("profile") === "missing" && <div className="note">Your IPO is filed on-chain. Publish the profile so people can see and question your agent.</div>}
+      <div className="ff"><label>Logo</label><ImageUpload kind="logo" value={f.logo} onChange={(id) => setF((c) => ({ ...c, logo: id }))} /></div>
+      <div className="ff"><label>Banner <span className="opt">Optional</span></label><ImageUpload kind="banner" value={f.banner} onChange={(id) => setF((c) => ({ ...c, banner: id }))} /></div>
       <div className="field"><label>Tagline</label><input value={f.tagline} onChange={set("tagline")} maxLength={120} /></div>
       <div className="field"><label>What does it do?</label><textarea value={f.description} onChange={set("description")} maxLength={2000} /></div>
       <div className="field"><label>Personality for the live Q&amp;A</label><textarea value={f.persona} onChange={set("persona")} maxLength={2000} /></div>

@@ -10,6 +10,8 @@ import { answerRoadshow, draftProspectus, RoadshowUnavailable } from "./claude.j
 import { getLaunchOnChain, profileMessage, RPC_URL } from "./chain.js";
 import { profileDigest } from "./digest.js";
 import { allow } from "./ratelimit.js";
+import path from "path";
+import { saveImage, imageExists, UploadError, IMAGE_ID, ACCEPTED_TYPES, MAX_UPLOAD_BYTES, UPLOAD_DIR, type ImageKind } from "./uploads.js";
 
 const app = express();
 app.set("trust proxy", 1); // Railway sits behind a proxy; req.ip is the real client
@@ -60,7 +62,12 @@ app.post("/api/agents", wrap(async (req, res) => {
     prospectus: clip(body.prospectus, 6000),
     website: clip(body.website, 200),
     emoji: clip(body.emoji, 8) || "🤖",
+    logo: typeof body.logo === "string" ? body.logo : "",
+    banner: typeof body.banner === "string" ? body.banner : "",
   };
+  for (const id of [fields.logo, fields.banner]) {
+    if (id && !(await imageExists(id))) return res.status(400).json({ error: "Image not found. Upload it again." });
+  }
   if (!fields.tagline || !fields.description) return res.status(400).json({ error: "Tagline and description are required" });
 
   const launch = await getLaunchOnChain(body.launch);
@@ -83,11 +90,41 @@ app.post("/api/agents", wrap(async (req, res) => {
     name: launch.name,
     symbol: launch.symbol,
     ...fields,
+    logo: fields.logo || undefined,
+    banner: fields.banner || undefined,
     createdAt: existing?.createdAt ?? Date.now(),
   };
   await saveProfile(profile);
   res.json(profile);
 }));
+
+// ───── images ─────
+
+app.post(
+  "/api/uploads",
+  express.raw({ type: ACCEPTED_TYPES, limit: MAX_UPLOAD_BYTES }),
+  wrap(async (req, res) => {
+    const kind = req.query.kind === "banner" ? "banner" : req.query.kind === "logo" ? "logo" : null;
+    if (!kind) return res.status(400).json({ error: "Missing image kind" });
+    if (!allow(`up:${req.ip}`, 30, 10 * 60_000)) return res.status(429).json({ error: "Too many uploads. Try again in a few minutes." });
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      return res.status(415).json({ error: "Use a PNG, JPG, WebP or GIF image." });
+    }
+    const id = await saveImage(req.body, kind as ImageKind);
+    res.json({ id });
+  })
+);
+
+app.get("/uploads/:id", (req, res) => {
+  const { id } = req.params;
+  if (!IMAGE_ID.test(id)) return res.status(404).end();
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.type("image/webp");
+  res.sendFile(path.join(UPLOAD_DIR, id), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
 
 // ───── roadshow ─────
 
@@ -142,6 +179,8 @@ app.post("/api/prospectus", wrap(async (req, res) => {
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof RoadshowUnavailable) return res.status(503).json({ error: err.message });
+  if (err instanceof UploadError) return res.status(400).json({ error: err.message });
+  if ((err as { type?: string })?.type === "entity.too.large") return res.status(413).json({ error: "Image is too large. Max 5 MB." });
   console.error(err);
   res.status(500).json({ error: "Something went wrong on the server" });
 });

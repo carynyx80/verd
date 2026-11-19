@@ -6,6 +6,7 @@ import { PHASE_LABEL, countdown, phaseOf, poolPrice, previewClearing, sol, token
 import type { Profile } from "@/lib/hooks";
 import Reveal from "@/components/Reveal";
 import HeroCard from "@/components/HeroCard";
+import AgentAvatar from "@/components/AgentAvatar";
 
 const ORDER: Phase[] = ["book", "roadshow", "bell", "trading", "failed"];
 
@@ -165,7 +166,7 @@ function ListingCard({ l, p, now }: { l: Launch; p?: Profile; now: number }) {
   return (
     <Link href={`/launch/${l.address}`} className="card">
       <div className="card-top">
-        <div className="avatar">{p?.emoji ?? "🤖"}</div>
+        <AgentAvatar logo={p?.logo} emoji={p?.emoji} />
         <div style={{ minWidth: 0 }}>
           <div className="name">{l.name} <span className="muted mono">${l.symbol}</span></div>
           <div className="tag">{p?.tagline ?? "Profile coming soon"}</div>

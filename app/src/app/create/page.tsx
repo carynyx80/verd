@@ -6,14 +6,15 @@ import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapte
 import { BN } from "@anchor-lang/core";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useConfig } from "@/lib/hooks";
-import { CLUSTER, ONE_TOKEN, api, getProgram, launchPda } from "@/lib/stewra";
+import { CLUSTER, ONE_TOKEN, api, getProgram, imageUrl, launchPda } from "@/lib/stewra";
 import { publishProfile } from "@/lib/publish";
 import { TxNote, useTx } from "@/lib/tx";
 import Prospectus from "@/components/Prospectus";
+import ImageUpload from "@/components/ImageUpload";
+import AgentAvatar from "@/components/AgentAvatar";
 
 const UNITS = { minutes: 60, hours: 3600, days: 86400 } as const;
 type Unit = keyof typeof UNITS;
-const EMOJIS = ["🤖", "🧠", "🔮", "🦾", "🛰️", "🐙", "⚡", "🧬", "📈", "🎯"];
 
 export default function CreatePage() {
   const router = useRouter();
@@ -32,6 +33,8 @@ export default function CreatePage() {
     persona: "",
     website: "",
     emoji: "🤖",
+    logo: "",
+    banner: "",
     saleTokens: "1000000",
     creatorPct: "10",
     minPrice: "0.00001",
@@ -88,6 +91,7 @@ export default function CreatePage() {
     if (!(Number(f.lpPct) >= 10 && Number(f.lpPct) <= 50)) return "Liquidity share must be 10–50%.";
     if (!(Number(f.book) > 0)) return "Order window must be longer than zero.";
     if (lockSecs < config.minLockSecs) return `Creator lockup must be at least ${Math.ceil(config.minLockSecs / 86400)} days on this network.`;
+    if (!f.logo) return "Upload a logo for your agent.";
     if (!f.prospectus.trim()) return "Write or draft a prospectus.";
     return null;
   }
@@ -120,7 +124,7 @@ export default function CreatePage() {
     const ok2 = await tx.run("Filed! Now sign to publish the agent's profile", () =>
       publishProfile(launch.toBase58(), {
         tagline: f.tagline.trim(), description: f.description.trim(), persona: f.persona.trim(),
-        prospectus: f.prospectus.trim(), website: f.website.trim(), emoji: f.emoji,
+        prospectus: f.prospectus.trim(), website: f.website.trim(), emoji: f.emoji, logo: f.logo, banner: f.banner,
       }, signMessage).then(() => undefined)
     , "IPO filed");
     // Even if the profile step fails, the launch exists; its page lets the creator retry.
@@ -144,6 +148,7 @@ export default function CreatePage() {
     ["Wallet connected", !!wallet],
     ["Name and ticker", !!f.name.trim() && /^[A-Za-z0-9]{1,10}$/.test(f.symbol)],
     ["Tagline and description", !!f.tagline.trim() && f.description.trim().length >= 10],
+    ["Logo", !!f.logo],
     ["Prospectus", !!f.prospectus.trim()],
   ];
   const ready = checks.every(([, ok]) => ok);
@@ -201,15 +206,13 @@ export default function CreatePage() {
                 <textarea id="desc" value={f.description} onChange={set("description")} maxLength={2000} rows={4}
                   placeholder="What it does, who it's for, and how it earns or plans to earn." />
               </div>
-              <div className="ff-row">
-                <div className="ff">
-                  <span className="ff-label" id="avatar-label">Avatar</span>
-                  <div className="swatches" role="radiogroup" aria-labelledby="avatar-label">
-                    {EMOJIS.map((e) => (
-                      <button key={e} type="button" role="radio" aria-checked={f.emoji === e} className={f.emoji === e ? "on" : ""} onClick={() => setF({ ...f, emoji: e })}>{e}</button>
-                    ))}
-                  </div>
-                </div>
+              <div className="ff">
+                <label htmlFor="logo-file">Logo</label>
+                <ImageUpload id="logo-file" kind="logo" value={f.logo} onChange={(id) => setF((cur) => ({ ...cur, logo: id }))} />
+              </div>
+              <div className="ff">
+                <label htmlFor="banner-file">Banner <span className="opt">Optional</span></label>
+                <ImageUpload id="banner-file" kind="banner" value={f.banner} onChange={(id) => setF((cur) => ({ ...cur, banner: id }))} />
               </div>
               <div className="ff">
                 <label htmlFor="website">Website <span className="opt">Optional</span></label>
@@ -319,8 +322,12 @@ export default function CreatePage() {
 
         <aside className="cf-aside">
           <div className="sum">
+            {f.banner && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="sum-banner" src={imageUrl(f.banner)} alt="" />
+            )}
             <div className="sum-preview">
-              <div className="avatar">{f.emoji}</div>
+              <AgentAvatar logo={f.logo} emoji={f.logo ? undefined : "·"} />
               <div style={{ minWidth: 0 }}>
                 <div className="sum-name">{f.name.trim() || "Untitled agent"} {f.symbol && <span className="mono muted">${f.symbol}</span>}</div>
                 <div className="sum-tag">{f.tagline.trim() || "Your tagline appears here"}</div>

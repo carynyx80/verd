@@ -8,10 +8,12 @@ export type ProfileFields = {
   prospectus: string;
   website: string;
   emoji: string;
+  logo: string; // uploaded image id, "" if none
+  banner: string; // uploaded image id, "" if none
 };
 
 /** Same digest on client and server so the creator's signature covers the exact content. */
 export function profileDigest(p: ProfileFields): string {
-  const canonical = JSON.stringify([p.tagline, p.description, p.persona, p.prospectus, p.website, p.emoji]);
+  const canonical = JSON.stringify([p.tagline, p.description, p.persona, p.prospectus, p.website, p.emoji, p.logo, p.banner]);
   return bytesToHex(sha256(new TextEncoder().encode(canonical)));
 }

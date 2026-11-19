@@ -72,7 +72,7 @@ export function useConfig() {
 
 export type Profile = {
   launch: string; creator: string; name: string; symbol: string; tagline: string;
-  description: string; persona: string; prospectus: string; website?: string; emoji: string; createdAt: number;
+  description: string; persona: string; prospectus: string; website?: string; emoji: string; logo?: string; banner?: string; createdAt: number;
 };
 
 export function useProfiles(pollMs = 10000) {
