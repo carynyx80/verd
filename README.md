@@ -112,8 +112,8 @@ Then set `NEXT_PUBLIC_CLUSTER=devnet` and `NEXT_PUBLIC_RPC_URL=https://api.devne
 
 ## Hosting
 
-- **Frontend → Vercel** (project `stewra`, root directory `app`). Deploys automatically on every push to `main`.
-- **Backend → Railway** (project `stewra`, service `stewra-server`, root directory `/server`, volume mounted at `/data`). Deploys automatically on pushes that touch `server/`.
+- **Frontend → Vercel** (project `verd`, root directory `app`). Deploys automatically on every push to `main`.
+- **Backend → Railway** (project `verd`, service `verd-server`, root directory `/server`, volume mounted at `/data`). Deploys automatically on pushes that touch `server/`.
 
 ## Configuration
 
@@ -133,4 +133,4 @@ Program id (local and default): `3ty1t4idNWNRgVFzwoTqYKZBz2SLTaLtYv6WbGEe3nzN`. 
 
 ## Naming note
 
-The product is **Stewra**. The on-chain program keeps its original internal name `verd` (folder `programs/verd`, files `target/deploy/verd.so` and `verd-keypair.json`, IDL `verd.json`) so it stays at the same address without redeploying. Users never see this name.
+The product is **Stewra**. The on-chain program keeps its original internal name `verd` (folder `programs/verd`, files `target/deploy/verd.so` and `verd-keypair.json`, IDL `verd.json`) so it stays at the same address without redeploying. Users never see this name. The GitHub repo (`carynyx80/verd`) and the Vercel and Railway projects also keep the `verd` name; everything visitors see says Stewra.
