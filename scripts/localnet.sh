@@ -7,7 +7,8 @@ export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 PROGRAM_ID=$(solana-keygen pubkey target/deploy/verd-keypair.json)
 [ -f target/deploy/verd.so ] || anchor build
 solana-test-validator --reset --quiet --ledger .anchor/dev-ledger \
-  --bpf-program "$PROGRAM_ID" target/deploy/verd.so &
+  --bpf-program "$PROGRAM_ID" target/deploy/verd.so \
+  --bpf-program metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s tests/fixtures/mpl_token_metadata.so &
 VALIDATOR=$!
 trap 'kill $VALIDATOR' EXIT
 until solana cluster-version -u localhost >/dev/null 2>&1; do sleep 1; done

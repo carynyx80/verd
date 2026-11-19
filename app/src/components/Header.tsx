@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CLUSTER } from "@/lib/stewra";
 import Faucet from "./Faucet";
 import Logo from "./Logo";
+import OpenInWallet from "./OpenInWallet";
 
 const WalletMultiButton = dynamic(
   async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
@@ -43,6 +44,7 @@ export default function Header() {
         </nav>
         <div className="nav-right">
           {CLUSTER === "localnet" && <Faucet />}
+          <OpenInWallet />
           <WalletMultiButton />
           <button className="nav-burger" aria-label="Menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
             <span /><span />

@@ -72,3 +72,65 @@ export async function appendTranscript(launch: string, e: RoadshowEntry) {
   all.push(e);
   await writeJson(file, all);
 }
+
+// ───── moderation ─────
+
+const MODERATION = path.join(DATA_DIR, "moderation.json");
+const REPORTS = path.join(DATA_DIR, "reports.json");
+
+export type Report = { id: string; launch: string; reason: string; details: string; reporter?: string; at: number; resolved?: boolean };
+type Moderation = { hidden: Record<string, { at: number; note: string }> };
+
+export async function getModeration(): Promise<Moderation> {
+  return readJson(MODERATION, { hidden: {} } as Moderation);
+}
+
+export async function setHidden(launch: string, hidden: boolean, note = "") {
+  const m = await getModeration();
+  if (hidden) m.hidden[launch] = { at: Date.now(), note };
+  else delete m.hidden[launch];
+  await writeJson(MODERATION, m);
+  return m;
+}
+
+export async function isHidden(launch: string) {
+  return Boolean((await getModeration()).hidden[launch]);
+}
+
+export async function listReports(): Promise<Report[]> {
+  return readJson(REPORTS, [] as Report[]);
+}
+
+export async function addReport(r: Report) {
+  const all = await listReports();
+  all.push(r);
+  await writeJson(REPORTS, all.slice(-5000));
+}
+
+export async function resolveReports(launch: string) {
+  const all = await listReports();
+  for (const r of all) if (r.launch === launch) r.resolved = true;
+  await writeJson(REPORTS, all);
+}
+
+// ───── backups ─────
+
+const BACKUP_DIR = path.join(DATA_DIR, "backups");
+
+/** Full export of everything the backend stores (images are content-addressed and kept separately). */
+export async function exportAll() {
+  const profiles = await listProfiles();
+  const transcripts: Record<string, RoadshowEntry[]> = {};
+  for (const launch of Object.keys(profiles)) transcripts[launch] = await getTranscript(launch);
+  return { exportedAt: new Date().toISOString(), profiles, transcripts, moderation: await getModeration(), reports: await listReports() };
+}
+
+/** Writes a dated snapshot and keeps the most recent `keep`. */
+export async function snapshot(keep = 14) {
+  await fs.mkdir(BACKUP_DIR, { recursive: true });
+  const name = `backup-${new Date().toISOString().slice(0, 13).replace(/[:T]/g, "-")}.json`;
+  await writeJson(path.join(BACKUP_DIR, name), await exportAll());
+  const files = (await fs.readdir(BACKUP_DIR)).filter((f) => f.startsWith("backup-")).sort();
+  for (const f of files.slice(0, Math.max(0, files.length - keep))) await fs.unlink(path.join(BACKUP_DIR, f)).catch(() => {});
+  return name;
+}

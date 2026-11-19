@@ -544,3 +544,41 @@ h3 { font-size: 14px; margin: 0 0 10px; }
 .lhead-overlap { padding-top: 0; }
 .lhead-overlap .avatar { margin-top: -28px; border: 3px solid var(--bg); width: 72px; height: 72px; border-radius: 16px; position: relative; }
 @media (max-width: 640px) { .lbanner { aspect-ratio: 2 / 1; } .lhead-overlap .avatar { margin-top: -22px; width: 60px; height: 60px; } }
+
+/* ── pause banner ── */
+.pause-banner { position: relative; z-index: 40; margin-top: 60px; margin-bottom: -60px; background: var(--amber-soft); border-bottom: 1px solid rgba(229, 160, 13, 0.3); color: var(--amber); font-size: 13px; padding: 9px 0; }
+
+/* ── report ── */
+.report { position: relative; display: inline-block; }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-3); text-underline-offset: 2px; }
+.link-btn:hover { color: var(--text); }
+.report-pop { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: 300px; display: grid; gap: 10px; padding: 14px; border-radius: var(--r-lg); border: 1px solid var(--line-2); background: var(--surface); box-shadow: var(--shadow); font-family: var(--sans); font-size: 13px; color: var(--text); }
+.report-title { margin: 0; font-weight: 600; font-size: 13.5px; }
+.report-done { margin: 0; color: var(--text-2); }
+.report-reasons { display: grid; gap: 2px; }
+.report-reasons label { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; color: var(--text-2); }
+.report-reasons label:hover, .report-reasons label.on { background: var(--surface-2); color: var(--text); }
+.report-reasons input { accent-color: var(--text); margin: 0; }
+.report-pop textarea { width: 100%; background: var(--bg); border: 1px solid var(--line-2); border-radius: var(--r); padding: 8px 10px; resize: vertical; outline: none; font: inherit; }
+.report-pop textarea:focus { border-color: var(--text-2); }
+
+/* ── admin ── */
+.admin-gate { display: grid; gap: 12px; justify-items: start; padding: 32px 0; }
+.admin section h2 { font-size: 15px; display: flex; gap: 8px; align-items: baseline; }
+.admin-note { flex: 1; min-width: 220px; max-width: 420px; background: var(--bg); border: 1px solid var(--line-2); border-radius: var(--r); padding: 7px 10px; outline: none; font-size: 13px; }
+.admin-list { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.admin-row { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.admin-row:last-child { border-bottom: 0; }
+.admin-list:empty { display: none; }
+.admin-main { display: grid; gap: 4px; min-width: 0; font-size: 13px; }
+.admin-name { font-weight: 600; font-size: 14px; }
+.admin-main ul { margin: 4px 0 0; padding-left: 16px; color: var(--text-2); }
+
+/* ── legal ── */
+.legal { max-width: 720px; padding-top: 28px; }
+.legal-date { margin-top: 10px !important; font-size: 12.5px; color: var(--dim) !important; }
+.legal-body { padding: 8px 0 0; }
+.legal-body h2 { font-size: 15px; margin: 28px 0 8px; }
+.legal-body p, .legal-body li { color: var(--text-2); font-size: 14.5px; line-height: 1.7; }
+.legal-body ul { padding-left: 18px; }
+.legal-body a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-3); text-underline-offset: 3px; }

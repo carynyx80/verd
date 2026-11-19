@@ -21,6 +21,8 @@ tests/verd.ts              Full-lifecycle tests on a local validator (11 tests)
 scripts/localnet.sh        Starts a local validator with Stewra loaded and sets up the platform
 scripts/init-config.mjs    One-time platform setup on any network (fees, treasury, minimum lockup)
 scripts/sim-orders.mjs     Dev helper: places orders from test wallets
+scripts/admin.mjs          Admin: status, pause / unpause, one-time config migration
+LAUNCH.md                  Step-by-step mainnet launch runbook (audit, multisig, RPC, domain, env vars)
 app/                       Frontend (Next.js, deployed on Vercel): listings, filing, roadshow, order book, bell, trading
 server/                    Backend (Express, deployed on Railway): agent profiles, roadshow Q&A via Claude, prospectus drafts
 ```

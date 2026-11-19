@@ -627,6 +627,43 @@ export type Verd = {
           "signer": true
         },
         {
+          "name": "metadata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tokenMetadataProgram"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "tokenMetadataProgram"
+            }
+          }
+        },
+        {
+          "name": "tokenMetadataProgram",
+          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+        },
+        {
           "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -683,6 +720,10 @@ export type Verd = {
         {
           "name": "lockSecs",
           "type": "i64"
+        },
+        {
+          "name": "uri",
+          "type": "string"
         }
       ]
     },
@@ -919,6 +960,53 @@ export type Verd = {
       ]
     },
     {
+      "name": "migrateConfig",
+      "docs": [
+        "One-time upgrade of a config account created before `paused` existed."
+      ],
+      "discriminator": [
+        92,
+        131,
+        58,
+        105,
+        210,
+        154,
+        224,
+        193
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "placeOrder",
       "docs": [
         "Book-building: escrow SOL with a maximum acceptable price (as a tick index)."
@@ -934,6 +1022,24 @@ export type Verd = {
         106
       ],
       "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
         {
           "name": "launch",
           "writable": true
@@ -1004,6 +1110,57 @@ export type Verd = {
         {
           "name": "maxTick",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "setPaused",
+      "docs": [
+        "Emergency switch. Blocks new launches, orders, the bell and trading.",
+        "Claims and order cancellations always keep working."
+      ],
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
         }
       ]
     },
@@ -1410,6 +1567,19 @@ export type Verd = {
       ]
     },
     {
+      "name": "pauseChanged",
+      "discriminator": [
+        238,
+        188,
+        213,
+        78,
+        134,
+        209,
+        178,
+        218
+      ]
+    },
+    {
       "name": "swapped",
       "discriminator": [
         217,
@@ -1498,6 +1668,16 @@ export type Verd = {
       "code": 6014,
       "name": "mathOverflow",
       "msg": "Math overflow"
+    },
+    {
+      "code": 6015,
+      "name": "paused",
+      "msg": "Stewra is paused for maintenance. Claims and refunds still work."
+    },
+    {
+      "code": 6016,
+      "name": "unauthorized",
+      "msg": "Not authorized"
     }
   ],
   "types": [
@@ -1581,6 +1761,10 @@ export type Verd = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
           }
         ]
       }
@@ -1806,6 +1990,18 @@ export type Verd = {
           {
             "name": "maxPrice",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "pauseChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
           }
         ]
       }

@@ -22,6 +22,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::metadata::{create_metadata_accounts_v3, mpl_token_metadata::types::DataV2, CreateMetadataAccountsV3, Metadata};
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
 declare_id!("3ty1t4idNWNRgVFzwoTqYKZBz2SLTaLtYv6WbGEe3nzN");
@@ -31,6 +32,7 @@ pub const ONE_TOKEN: u128 = 1_000_000; // 10^DECIMALS
 pub const NUM_TICKS: usize = 10;
 pub const BPS: u128 = 10_000;
 pub const MIN_ORDER_LAMPORTS: u64 = 10_000_000; // 0.01 SOL
+pub const MAX_URI_LEN: usize = 200;
 
 #[program]
 pub mod verd {
@@ -54,6 +56,44 @@ pub mod verd {
         c.min_lock_secs = min_lock_secs;
         c.launch_count = 0;
         c.bump = ctx.bumps.config;
+        c.paused = false;
+        Ok(())
+    }
+
+    /// Emergency switch. Blocks new launches, orders, the bell and trading.
+    /// Claims and order cancellations always keep working.
+    pub fn set_paused(ctx: Context<SetPaused>, paused: bool) -> Result<()> {
+        ctx.accounts.config.paused = paused;
+        emit!(PauseChanged { paused });
+        Ok(())
+    }
+
+    /// One-time upgrade of a config account created before `paused` existed.
+    pub fn migrate_config(ctx: Context<MigrateConfig>) -> Result<()> {
+        let info = ctx.accounts.config.to_account_info();
+        require_keys_eq!(*info.owner, crate::ID, VerdError::InvalidParams);
+        let new_len = 8 + Config::INIT_SPACE;
+        {
+            let data = info.try_borrow_data()?;
+            require!(data.len() >= 8 + 32, VerdError::InvalidParams);
+            let admin = Pubkey::try_from(&data[8..40]).map_err(|_| error!(VerdError::InvalidParams))?;
+            require_keys_eq!(admin, ctx.accounts.admin.key(), VerdError::Unauthorized);
+            if data.len() >= new_len {
+                return Ok(()); // already migrated
+            }
+        }
+        let needed = Rent::get()?.minimum_balance(new_len).saturating_sub(info.lamports());
+        if needed > 0 {
+            system_program::transfer(
+                CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    system_program::Transfer { from: ctx.accounts.admin.to_account_info(), to: info.clone() },
+                ),
+                needed,
+            )?;
+        }
+        info.resize(new_len)?;
+        info.try_borrow_mut_data()?[new_len - 1] = 0; // paused = false
         Ok(())
     }
 
@@ -90,8 +130,11 @@ pub mod verd {
         roadshow_secs: i64,
         order_secs: i64,
         lock_secs: i64,
+        uri: String,
     ) -> Result<()> {
+        require!(!ctx.accounts.config.paused, VerdError::Paused);
         require!(name.len() >= 1 && name.len() <= 32, VerdError::InvalidParams);
+        require!(uri.len() <= MAX_URI_LEN, VerdError::InvalidParams);
         require!(symbol.len() >= 1 && symbol.len() <= 10, VerdError::InvalidParams);
         require!(sale_supply > 0, VerdError::InvalidParams);
         // creator can keep at most 25% of the sale supply (=20% of the total float)
@@ -158,7 +201,41 @@ pub mod verd {
             )?;
         }
 
+        // Register name, ticker and logo URI so wallets display the token.
+        // The launch PDA is mint and update authority; nobody else can change it.
+        let creator_key = ctx.accounts.creator.key();
+        let id_bytes = launch_id.to_le_bytes();
+        let launch_seeds: &[&[u8]] = &[b"launch", creator_key.as_ref(), &id_bytes, &[ctx.bumps.launch]];
+        create_metadata_accounts_v3(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_metadata_program.to_account_info(),
+                CreateMetadataAccountsV3 {
+                    metadata: ctx.accounts.metadata.to_account_info(),
+                    mint: ctx.accounts.mint.to_account_info(),
+                    mint_authority: ctx.accounts.launch.to_account_info(),
+                    payer: ctx.accounts.creator.to_account_info(),
+                    update_authority: ctx.accounts.launch.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                    rent: ctx.accounts.rent.to_account_info(),
+                },
+                &[launch_seeds],
+            ),
+            DataV2 {
+                name: ctx.accounts.launch.name.clone(),
+                symbol: ctx.accounts.launch.symbol.clone(),
+                uri,
+                seller_fee_basis_points: 0,
+                creators: None,
+                collection: None,
+                uses: None,
+            },
+            true,
+            true,
+            None,
+        )?;
+
         config.launch_count = config.launch_count.saturating_add(1);
+        let l = &ctx.accounts.launch;
         emit!(LaunchCreated {
             launch: l.key(),
             creator: l.creator,
@@ -169,6 +246,7 @@ pub mod verd {
 
     /// Book-building: escrow SOL with a maximum acceptable price (as a tick index).
     pub fn place_order(ctx: Context<PlaceOrder>, budget: u64, max_tick: u8) -> Result<()> {
+        require!(!ctx.accounts.config.paused, VerdError::Paused);
         let now = Clock::get()?.unix_timestamp;
         let l = &mut ctx.accounts.launch;
         require!(!l.finalized, VerdError::AlreadyFinalized);
@@ -236,6 +314,7 @@ pub mod verd {
 
     /// The opening bell. Anyone can ring it once the book has closed.
     pub fn finalize(ctx: Context<Finalize>) -> Result<()> {
+        require!(!ctx.accounts.config.paused, VerdError::Paused);
         let now = Clock::get()?.unix_timestamp;
         let launch_key = ctx.accounts.launch.key();
         let l = &mut ctx.accounts.launch;
@@ -383,20 +462,17 @@ pub mod verd {
         let launch_key = ctx.accounts.launch.key();
         let swap_fee_bps = ctx.accounts.config.swap_fee_bps as u128;
         let l = &mut ctx.accounts.launch;
+        require!(!ctx.accounts.config.paused, VerdError::Paused);
         require!(l.finalized, VerdError::NotFinalized);
         require!(l.pool_sol > 0 && l.pool_tokens > 0, VerdError::PoolEmpty);
         require!(amount_in > 0, VerdError::InvalidParams);
 
         let sys = ctx.accounts.system_program.to_account_info();
-        let x = l.pool_sol as u128;
-        let y = l.pool_tokens as u128;
+        let q = swap_quote(l.pool_sol, l.pool_tokens, amount_in, swap_fee_bps as u64, buy)?;
 
         if buy {
-            let fee = (amount_in as u128 * swap_fee_bps / BPS) as u64;
-            let net = amount_in - fee;
-            let out = (y * net as u128 / (x + net as u128)) as u64;
+            let (net, out, fee) = (q.pool_delta, q.out, q.fee);
             require!(out >= min_out, VerdError::Slippage);
-            require!(out > 0 && (out as u128) < y, VerdError::PoolEmpty);
 
             system_program::transfer(
                 CpiContext::new(sys.clone(), system_program::Transfer {
@@ -434,11 +510,8 @@ pub mod verd {
             l.volume_sol = l.volume_sol.saturating_add(amount_in);
             emit!(Swapped { launch: launch_key, trader: ctx.accounts.trader.key(), buy, amount_in, amount_out: out });
         } else {
-            let gross = (x * amount_in as u128 / (y + amount_in as u128)) as u64;
-            let fee = (gross as u128 * swap_fee_bps / BPS) as u64;
-            let out = gross - fee;
+            let (gross, out, fee) = (q.pool_delta, q.out, q.fee);
             require!(out >= min_out, VerdError::Slippage);
-            require!(gross > 0 && (gross as u128) < x, VerdError::PoolEmpty);
 
             token::transfer(
                 CpiContext::new(
@@ -532,6 +605,35 @@ pub fn allocation(budget: u64, max_tick: u8, l: &Launch) -> Result<(u64, u64)> {
     Ok((spent as u64, tokens as u64))
 }
 
+pub struct SwapQuote {
+    /// buy: lamports added to the pool; sell: lamports taken from the pool (before fee)
+    pub pool_delta: u64,
+    /// buy: tokens out; sell: lamports to the trader after fee
+    pub out: u64,
+    /// lamports to the treasury
+    pub fee: u64,
+}
+
+/// Constant-product quote with the protocol fee taken in SOL on both sides.
+pub fn swap_quote(pool_sol: u64, pool_tokens: u64, amount_in: u64, fee_bps: u64, buy: bool) -> Result<SwapQuote> {
+    let x = pool_sol as u128;
+    let y = pool_tokens as u128;
+    require!(x > 0 && y > 0, VerdError::PoolEmpty);
+    require!(amount_in > 0, VerdError::InvalidParams);
+    if buy {
+        let fee = (amount_in as u128 * fee_bps as u128 / BPS) as u64;
+        let net = amount_in - fee;
+        let out = y * net as u128 / (x + net as u128);
+        require!(out > 0 && out < y, VerdError::PoolEmpty);
+        Ok(SwapQuote { pool_delta: net, out: out as u64, fee })
+    } else {
+        let gross = x * amount_in as u128 / (y + amount_in as u128);
+        require!(gross > 0 && gross < x, VerdError::PoolEmpty);
+        let fee = (gross * fee_bps as u128 / BPS) as u64;
+        Ok(SwapQuote { pool_delta: gross as u64, out: gross as u64 - fee, fee })
+    }
+}
+
 fn pay_from_pda<'info>(
     from: &AccountInfo<'info>,
     to: &AccountInfo<'info>,
@@ -564,6 +666,7 @@ pub struct Config {
     pub min_lock_secs: i64,
     pub launch_count: u64,
     pub bump: u8,
+    pub paused: bool,
 }
 
 #[account]
@@ -639,6 +742,23 @@ pub struct UpdateConfig<'info> {
 }
 
 #[derive(Accounts)]
+pub struct SetPaused<'info> {
+    #[account(mut, seeds = [b"config"], bump = config.bump, has_one = admin)]
+    pub config: Account<'info, Config>,
+    pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct MigrateConfig<'info> {
+    /// CHECK: old-layout config; owner and admin are verified by hand in the handler
+    #[account(mut, seeds = [b"config"], bump)]
+    pub config: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 #[instruction(launch_id: u64)]
 pub struct CreateLaunch<'info> {
     #[account(mut, seeds = [b"config"], bump = config.bump)]
@@ -675,6 +795,15 @@ pub struct CreateLaunch<'info> {
     pub pool_sol_vault: SystemAccount<'info>,
     #[account(mut)]
     pub creator: Signer<'info>,
+    /// CHECK: created by the Metaplex token metadata program; address is checked by seeds
+    #[account(
+        mut,
+        seeds = [b"metadata", token_metadata_program.key().as_ref(), mint.key().as_ref()],
+        seeds::program = token_metadata_program.key(),
+        bump
+    )]
+    pub metadata: UncheckedAccount<'info>,
+    pub token_metadata_program: Program<'info, Metadata>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
@@ -682,6 +811,8 @@ pub struct CreateLaunch<'info> {
 
 #[derive(Accounts)]
 pub struct PlaceOrder<'info> {
+    #[account(seeds = [b"config"], bump = config.bump)]
+    pub config: Box<Account<'info, Config>>,
     #[account(mut)]
     pub launch: Box<Account<'info, Launch>>,
     #[account(
@@ -828,6 +959,8 @@ pub struct Swap<'info> {
 // ───────────────────────── events & errors ─────────────────────────
 
 #[event]
+pub struct PauseChanged { pub paused: bool }
+#[event]
 pub struct LaunchCreated { pub launch: Pubkey, pub creator: Pubkey, pub mint: Pubkey }
 #[event]
 pub struct OrderPlaced { pub launch: Pubkey, pub buyer: Pubkey, pub budget: u64, pub max_price: u64 }
@@ -870,6 +1003,10 @@ pub enum VerdError {
     Slippage,
     #[msg("Math overflow")]
     MathOverflow,
+    #[msg("Stewra is paused for maintenance. Claims and refunds still work.")]
+    Paused,
+    #[msg("Not authorized")]
+    Unauthorized,
 }
 
 #[cfg(test)]
@@ -910,5 +1047,95 @@ mod tests {
         assert_eq!(c.price, 100_000_000);
         assert_eq!(c.sold_value, 1_000_000_000);
         assert_eq!(c.tokens_sold, 10 * ONE_TOKEN as u64);
+    }
+}
+
+#[cfg(test)]
+mod properties {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn launch_after(buckets: [u64; NUM_TICKS], total: u64, min: u64, max: u64, supply: u64) -> Launch {
+        let c = compute_clearing(&buckets, min, max, supply, total).unwrap();
+        Launch {
+            creator: Pubkey::default(), launch_id: 0, mint: Pubkey::default(),
+            name: String::new(), symbol: String::new(),
+            sale_supply: supply, creator_supply: 0, min_price: min, max_price: max,
+            lp_bps: 3000, fee_bps: 200, created_at: 0, roadshow_end: 0, order_end: 0,
+            lock_secs: 0, lock_until: 0, bucket_budget: buckets, total_budget: total,
+            order_count: 0, finalized: true, clearing_tick: c.tick, clearing_price: c.price,
+            eligible_budget: c.eligible_budget, sold_value: c.sold_value, tokens_sold: c.tokens_sold,
+            creator_claimed: false, pool_sol: 0, pool_tokens: 0, volume_sol: 0,
+            bump: 0, vault_bump: 0, pool_sol_bump: 0, mint_bump: 0, pool_tokens_bump: 0,
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(4000))]
+
+        /// For any set of orders: the vault can pay every refund, nobody pays more
+        /// than they put in or above their max price, and the price stays in range.
+        #[test]
+        fn auction_is_solvent_and_fair(
+            orders in prop::collection::vec((MIN_ORDER_LAMPORTS..200_000_000_000u64, 0u8..NUM_TICKS as u8), 1..60),
+            min in 1_000u64..10_000_000,
+            spread in 0u64..100_000_000,
+            supply_tokens in 1u64..10_000_000,
+        ) {
+            let max = min + spread;
+            let supply = supply_tokens * ONE_TOKEN as u64;
+            let mut buckets = [0u64; NUM_TICKS];
+            let mut total = 0u64;
+            for (b, t) in &orders { buckets[*t as usize] += b; total += b; }
+            let l = launch_after(buckets, total, min, max, supply);
+
+            prop_assert!(l.clearing_price >= min && l.clearing_price <= max);
+            prop_assert!(l.sold_value <= total);
+
+            let mut spent_sum: u128 = 0;
+            let mut tokens_sum: u128 = 0;
+            for (b, t) in &orders {
+                let (spent, toks) = allocation(*b, *t, &l).unwrap();
+                prop_assert!(spent <= *b, "paid more than budget");
+                if *t < l.clearing_tick { prop_assert_eq!(spent, 0); prop_assert_eq!(toks, 0); }
+                if toks > 0 {
+                    let max_ok = tick_price(min, max, *t).unwrap() as u128;
+                    // effective price never exceeds the buyer's limit (allow 1 base unit rounding)
+                    prop_assert!(spent as u128 * ONE_TOKEN <= max_ok * (toks as u128 + 1));
+                }
+                spent_sum += spent as u128;
+                tokens_sum += toks as u128;
+            }
+            // Solvency: what leaves the vault at the bell plus all refunds never exceeds deposits.
+            prop_assert!(spent_sum >= l.sold_value as u128, "refunds would exceed vault");
+            // Rounding up spend may hand out at most ~1 lamport worth of tokens extra per order.
+            let slack = orders.len() as u128 * (ONE_TOKEN / l.clearing_price as u128 + 1);
+            prop_assert!(tokens_sum <= l.tokens_sold as u128 + slack);
+        }
+
+        /// Trading never lets the pool be drained or its value (x*y) shrink.
+        #[test]
+        fn pool_invariant_holds(
+            pool_sol in 1_000_000u64..1_000_000_000_000,
+            pool_tokens in 1_000_000u64..1_000_000_000_000_000,
+            trades in prop::collection::vec((1u64..10_000_000_000_000, any::<bool>()), 1..40),
+            fee_bps in 0u64..500,
+        ) {
+            let (mut x, mut y) = (pool_sol, pool_tokens);
+            for (amt, buy) in trades {
+                let k_before = x as u128 * y as u128;
+                let amt = if buy { amt } else { amt % (y.saturating_mul(4) + 1) + 1 };
+                if let Ok(q) = swap_quote(x, y, amt, fee_bps, buy) {
+                    if buy { x += q.pool_delta; y -= q.out; } else { x -= q.pool_delta; y += amt; }
+                    prop_assert!(x > 0 && y > 0, "pool drained");
+                    prop_assert!(x as u128 * y as u128 >= k_before, "k decreased");
+                    if buy {
+                        prop_assert_eq!(q.pool_delta + q.fee, amt, "buy: SOL in must equal pool + fee");
+                    } else {
+                        prop_assert_eq!(q.out + q.fee, q.pool_delta, "sell: SOL out + fee must equal what left the pool");
+                    }
+                }
+            }
+        }
     }
 }

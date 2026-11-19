@@ -50,7 +50,7 @@ export function useLaunch(address: string, pollMs = 4000) {
   return { launch, reload: load };
 }
 
-export type PlatformConfig = { feeBps: number; swapFeeBps: number; minLockSecs: number; treasury: string };
+export type PlatformConfig = { feeBps: number; swapFeeBps: number; minLockSecs: number; treasury: string; paused: boolean };
 
 export function useConfig() {
   const { connection } = useConnection();
@@ -61,7 +61,7 @@ export function useConfig() {
       .then((c) =>
         setConfig(
           c
-            ? { feeBps: c.feeBps, swapFeeBps: c.swapFeeBps, minLockSecs: Number(c.minLockSecs.toString()), treasury: c.treasury.toBase58() }
+            ? { feeBps: c.feeBps, swapFeeBps: c.swapFeeBps, minLockSecs: Number(c.minLockSecs.toString()), treasury: c.treasury.toBase58(), paused: Boolean(c.paused) }
             : null
         )
       )
@@ -72,7 +72,7 @@ export function useConfig() {
 
 export type Profile = {
   launch: string; creator: string; name: string; symbol: string; tagline: string;
-  description: string; persona: string; prospectus: string; website?: string; emoji: string; logo?: string; banner?: string; createdAt: number;
+  description: string; persona: string; prospectus: string; website?: string; emoji: string; logo?: string; banner?: string; hidden?: boolean; createdAt: number;
 };
 
 export function useProfiles(pollMs = 10000) {
@@ -84,4 +84,16 @@ export function useProfiles(pollMs = 10000) {
     return () => clearInterval(t);
   }, [pollMs]);
   return profiles;
+}
+
+/** Launch addresses hidden by moderators. */
+export function useHidden(pollMs = 30000) {
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const load = () => fetch(api("/api/moderation")).then((r) => r.json()).then((d) => setHidden(new Set(d.hidden ?? []))).catch(() => {});
+    load();
+    const t = setInterval(load, pollMs);
+    return () => clearInterval(t);
+  }, [pollMs]);
+  return hidden;
 }

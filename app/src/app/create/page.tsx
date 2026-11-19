@@ -115,7 +115,8 @@ export default function CreatePage() {
           Math.round(Number(f.lpPct) * 100),
           new BN(Math.round(Number(f.roadshow) * UNITS[f.roadshowUnit])),
           new BN(Math.round(Number(f.book) * UNITS[f.bookUnit])),
-          new BN(lockSecs)
+          new BN(lockSecs),
+          api(`/metadata/${launch.toBase58()}.json`)
         )
         .accounts({ creator: wallet!.publicKey } as never)
         .rpc()

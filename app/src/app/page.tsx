@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { useLaunches, useNow, useProfiles } from "@/lib/hooks";
+import { useHidden, useLaunches, useNow, useProfiles } from "@/lib/hooks";
 import { PHASE_LABEL, countdown, phaseOf, poolPrice, previewClearing, sol, tokens, type Launch, type Phase } from "@/lib/stewra";
 import type { Profile } from "@/lib/hooks";
 import Reveal from "@/components/Reveal";
@@ -21,10 +21,11 @@ const STEPS = [
 export default function Home() {
   const { launches, error } = useLaunches();
   const profiles = useProfiles();
+  const hidden = useHidden();
   const now = useNow();
   const reduce = useReducedMotion();
 
-  const sorted = (launches ?? []).slice().sort((a, b) => ORDER.indexOf(phaseOf(a, now)) - ORDER.indexOf(phaseOf(b, now)));
+  const sorted = (launches ?? []).filter((l) => !hidden.has(l.address)).sort((a, b) => ORDER.indexOf(phaseOf(a, now)) - ORDER.indexOf(phaseOf(b, now)));
   const raised = (launches ?? []).reduce((s, l) => s + l.soldValue, 0);
   const buyers = (launches ?? []).reduce((s, l) => s + (l.finalized ? l.orderCount : 0), 0);
   const volume = (launches ?? []).reduce((s, l) => s + l.volumeSol, 0);

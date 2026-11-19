@@ -16,6 +16,7 @@ import { publishProfile } from "@/lib/publish";
 import Prospectus from "@/components/Prospectus";
 import AgentAvatar from "@/components/AgentAvatar";
 import ImageUpload from "@/components/ImageUpload";
+import ReportButton from "@/components/ReportButton";
 
 type Order = { budget: number; maxTick: number; placedAt: number };
 type Entry = { id: string; question: string; answer: string; asker?: string; at: number };
@@ -53,22 +54,23 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <>
-      {profile?.banner && (
+      {profile?.banner && !profile.hidden && (
         // eslint-disable-next-line @next/next/no-img-element
         <img className="lbanner" src={imageUrl(profile.banner)} alt="" />
       )}
       <div className={`lhead ${profile?.banner ? "lhead-overlap" : ""}`}>
-        <AgentAvatar logo={profile?.logo} emoji={profile?.emoji} />
+        <AgentAvatar logo={profile?.hidden ? undefined : profile?.logo} emoji={profile?.emoji} />
         <div>
           <div className="row" style={{ gap: 10 }}>
             <h1>{launch.name}</h1>
             <span className="muted mono">${launch.symbol}</span>
             <span className={`pill ${phase}`}>{PHASE_LABEL[phase]}</span>
           </div>
-          <div className="tag">{profile?.tagline ?? "No profile published yet"}</div>
+          <div className="tag">{profile?.hidden ? "Removed" : profile?.tagline ?? "No profile published yet"}</div>
           <div className="muted mono" style={{ fontSize: 12, marginTop: 4 }}>
             creator {short(launch.creator)}
-            {profile?.website && <> · <a href={profile.website} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>website</a></>}
+            {profile?.website && !profile.hidden && <> · <a href={profile.website} target="_blank" rel="nofollow noopener noreferrer" style={{ textDecoration: "underline" }}>website</a></>}
+            {" · "}<ReportButton launch={launch.address} />
           </div>
         </div>
         {clockTarget && (
@@ -79,10 +81,15 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
         )}
       </div>
 
+      {profile?.hidden && (
+        <div className="note err" style={{ marginBottom: 16 }}>
+          This listing was removed by moderators. If you placed an order, you can still cancel it or claim your refund below.
+        </div>
+      )}
       <div className="grid2">
         <div className="stack">
           {profile === null && isCreator && <ProfileForm launch={launch} onSaved={loadProfile} />}
-          {profile && (
+          {profile && !profile.hidden && (
             <div className="panel">
               <h2>Prospectus</h2>
               <Prospectus text={profile.prospectus} />
@@ -90,7 +97,7 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
               <p style={{ margin: 0, color: "#c9d3cd", whiteSpace: "pre-wrap" }}>{profile.description}</p>
             </div>
           )}
-          <Roadshow launch={launch} profile={profile ?? null} phase={phase} />
+          {!profile?.hidden && <Roadshow launch={launch} profile={profile ?? null} phase={phase} />}
         </div>
 
         <div className="stack">

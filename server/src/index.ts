@@ -5,12 +5,14 @@ import { randomUUID } from "crypto";
 import { ed25519 } from "@noble/curves/ed25519";
 import bs58 from "bs58";
 import { PublicKey } from "@solana/web3.js";
-import { listProfiles, getProfile, saveProfile, getTranscript, appendTranscript, type AgentProfile } from "./store.js";
+import { listProfiles, getProfile, saveProfile, getTranscript, appendTranscript, getModeration, setHidden, isHidden, listReports, addReport, resolveReports, exportAll, snapshot, type AgentProfile } from "./store.js";
+import { verifyAdmin, adminsConfigured } from "./admin.js";
 import { answerRoadshow, draftProspectus, RoadshowUnavailable } from "./claude.js";
 import { getLaunchOnChain, profileMessage, RPC_URL } from "./chain.js";
 import { profileDigest } from "./digest.js";
 import { allow } from "./ratelimit.js";
 import path from "path";
+import sharp from "sharp";
 import { saveImage, imageExists, UploadError, IMAGE_ID, ACCEPTED_TYPES, MAX_UPLOAD_BYTES, UPLOAD_DIR, type ImageKind } from "./uploads.js";
 
 const app = express();
@@ -47,7 +49,7 @@ app.get("/api/agents", wrap(async (_req, res) => {
 app.get("/api/agents/:launch", wrap(async (req, res) => {
   const p = await getProfile(req.params.launch);
   if (!p) return res.status(404).json({ error: "No profile yet" });
-  res.json(p);
+  res.json({ ...p, hidden: await isHidden(req.params.launch) });
 }));
 
 app.post("/api/agents", wrap(async (req, res) => {
@@ -115,6 +117,15 @@ app.post(
   })
 );
 
+// PNG copy for link-preview generators that can't decode WebP.
+app.get("/uploads/:hash.png", wrap(async (req, res) => {
+  const id = `${req.params.hash}.webp`;
+  if (!IMAGE_ID.test(id) || !(await imageExists(id))) return res.status(404).end();
+  const png = await sharp(path.join(UPLOAD_DIR, id)).png().toBuffer();
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.type("image/png").send(png);
+}));
+
 app.get("/uploads/:id", (req, res) => {
   const { id } = req.params;
   if (!IMAGE_ID.test(id)) return res.status(404).end();
@@ -125,6 +136,84 @@ app.get("/uploads/:id", (req, res) => {
     if (err && !res.headersSent) res.status(404).end();
   });
 });
+
+// ───── wallet token metadata (Metaplex JSON) ─────
+
+const SITE_URL = (process.env.SITE_URL || "").replace(/\/$/, "");
+const PUBLIC_API_URL = (process.env.PUBLIC_API_URL || "").replace(/\/$/, "");
+
+app.get("/metadata/:file", wrap(async (req, res) => {
+  const launch = req.params.file.replace(/\.json$/, "");
+  if (!isPubkey(launch)) return res.status(404).json({ error: "Not found" });
+  const [onchain, profile] = await Promise.all([getLaunchOnChain(launch), getProfile(launch)]);
+  if (!onchain) return res.status(404).json({ error: "Not found" });
+  const base = PUBLIC_API_URL || `${req.protocol}://${req.get("host")}`;
+  const hidden = await isHidden(launch);
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.json({
+    name: onchain.name,
+    symbol: onchain.symbol,
+    description: hidden ? "" : profile?.tagline ?? "",
+    image: !hidden && profile?.logo ? `${base}/uploads/${profile.logo.replace(/\.webp$/, "")}.png` : undefined,
+    external_url: SITE_URL ? `${SITE_URL}/launch/${launch}` : undefined,
+  });
+}));
+
+// ───── moderation ─────
+
+app.get("/api/moderation", wrap(async (_req, res) => {
+  const m = await getModeration();
+  res.setHeader("Cache-Control", "public, max-age=15");
+  res.json({ hidden: Object.keys(m.hidden) });
+}));
+
+const REASONS = ["impersonation", "scam", "offensive", "copyright", "other"];
+
+app.post("/api/reports", wrap(async (req, res) => {
+  if (!allow(`rp:${req.ip}`, 10, 60 * 60_000)) return res.status(429).json({ error: "Too many reports. Try again later." });
+  const launch = String(req.body?.launch ?? "");
+  const reason = String(req.body?.reason ?? "");
+  if (!isPubkey(launch) || !REASONS.includes(reason)) return res.status(400).json({ error: "Choose a reason" });
+  const reporter = typeof req.body?.reporter === "string" && isPubkey(req.body.reporter) ? req.body.reporter : undefined;
+  await addReport({ id: randomUUID(), launch, reason, details: clip(req.body?.details, 500), reporter, at: Date.now() });
+  res.json({ ok: true });
+}));
+
+// ───── admin (wallet-signature auth) ─────
+
+app.get("/api/admin/status", (_req, res) => res.json({ configured: adminsConfigured() }));
+
+function admin(action: string, launchRequired: boolean) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!adminsConfigured()) return res.status(503).json({ error: "No admin wallets configured on the server (ADMIN_WALLETS)" });
+    if (req.body?.action !== action) return res.status(400).json({ error: "Wrong action" });
+    if (launchRequired && !isPubkey(String(req.body?.launch ?? ""))) return res.status(400).json({ error: "Invalid launch" });
+    const problem = verifyAdmin(req.body);
+    if (problem) return res.status(401).json({ error: problem });
+    next();
+  };
+}
+
+app.post("/api/admin/reports", admin("list-reports", false), wrap(async (_req, res) => {
+  const [reports, m, profiles] = await Promise.all([listReports(), getModeration(), listProfiles()]);
+  res.json({ reports: reports.slice().reverse(), hidden: m.hidden, names: Object.fromEntries(Object.values(profiles).map((p) => [p.launch, `${p.name} $${p.symbol}`])) });
+}));
+
+app.post("/api/admin/hide", admin("hide", true), wrap(async (req, res) => {
+  await setHidden(req.body.launch, true, clip(req.body?.note, 200));
+  await resolveReports(req.body.launch);
+  res.json({ ok: true });
+}));
+
+app.post("/api/admin/unhide", admin("unhide", true), wrap(async (req, res) => {
+  await setHidden(req.body.launch, false);
+  res.json({ ok: true });
+}));
+
+app.post("/api/admin/export", admin("export", false), wrap(async (_req, res) => {
+  res.setHeader("Content-Disposition", `attachment; filename="stewra-export-${new Date().toISOString().slice(0, 10)}.json"`);
+  res.json(await exportAll());
+}));
 
 // ───── roadshow ─────
 
@@ -145,6 +234,7 @@ app.post("/api/roadshow/:launch", wrap(async (req, res) => {
   if (!onchain) return res.status(404).json({ error: "Launch not found" });
   if (!profile) return res.status(409).json({ error: "This agent hasn't published its profile yet" });
   if (onchain.finalized) return res.status(409).json({ error: "The roadshow is over — this agent is already trading" });
+  if (await isHidden(launch)) return res.status(403).json({ error: "This listing has been removed" });
 
   const history = await getTranscript(launch);
   const answer = await answerRoadshow(profile, history, question);
@@ -184,6 +274,11 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
   res.status(500).json({ error: "Something went wrong on the server" });
 });
+
+// Rolling snapshots on the data volume: at boot and every 6 hours, last 14 kept.
+const runSnapshot = () => snapshot().then((f) => console.log(`snapshot ${f}`)).catch((e) => console.error("snapshot failed", e));
+setTimeout(runSnapshot, 10_000);
+setInterval(runSnapshot, 6 * 60 * 60_000).unref();
 
 const port = Number(process.env.PORT) || 4000;
 app.listen(port, () => console.log(`stewra-server listening on :${port} (rpc ${RPC_URL}, origins ${origins.join(", ")})`));

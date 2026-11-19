@@ -22,6 +22,12 @@ export default function Footer() {
             <Link href="/how-to-use#creators">For creators</Link>
             <Link href="/how-to-use#glossary">Glossary</Link>
           </div>
+          <div>
+            <h5>Legal</h5>
+            <Link href="/terms">Terms</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/risk">Risk disclosure</Link>
+          </div>
         </div>
       </div>
       <div className="wrap footer-legal">

@@ -68,7 +68,7 @@ describe("stewra: full agent IPO lifecycle", () => {
     await expectErr(
       program.methods
         .createLaunch(new BN(1), "Greedy", "GRDY", new BN(1000 * ONE), new BN(400 * ONE),
-          new BN(1_000_000), new BN(10_000_000), 3000, new BN(1), new BN(5), new BN(0))
+          new BN(1_000_000), new BN(10_000_000), 3000, new BN(1), new BN(5), new BN(0), "https://example.com/m.json")
         .accounts({ creator: creator.publicKey } as any)
         .signers([creator])
         .rpc(),
@@ -79,13 +79,25 @@ describe("stewra: full agent IPO lifecycle", () => {
   it("files an agent IPO: 1000 tokens, 0.001–0.01 SOL range", async () => {
     await program.methods
       .createLaunch(launchId, "Oracle Agent", "ORCL", new BN(1000 * ONE), new BN(200 * ONE),
-        new BN(1_000_000), new BN(10_000_000), 3000, new BN(3), new BN(8), new BN(4))
+        new BN(1_000_000), new BN(10_000_000), 3000, new BN(3), new BN(8), new BN(4), "https://stewra.example/metadata/orcl.json")
       .accounts({ creator: creator.publicKey } as any)
       .signers([creator])
       .rpc();
     const l = await program.account.launch.fetch(launchPda);
     assert.equal(l.name, "Oracle Agent");
     assert.isFalse(l.finalized);
+  });
+
+  it("registers wallet-visible token metadata (name, ticker, logo URI)", async () => {
+    const MPL = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+    const [meta] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), MPL.toBuffer(), mintPda.toBuffer()], MPL);
+    const info = await conn.getAccountInfo(meta);
+    assert.isNotNull(info, "metadata account exists");
+    assert.isTrue(info!.owner.equals(MPL));
+    const text = info!.data.toString("latin1");
+    assert.include(text, "Oracle Agent");
+    assert.include(text, "ORCL");
+    assert.include(text, "https://stewra.example/metadata/orcl.json");
   });
 
   it("blocks orders during the roadshow", async () => {
@@ -210,5 +222,31 @@ describe("stewra: full agent IPO lifecycle", () => {
     const bal = Number((await getAccount(conn, getAssociatedTokenAddressSync(mintPda, creator.publicKey))).amount);
     assert.equal(bal, 200 * ONE);
     await expectErr(claimCreator(), "AlreadyClaimed");
+  });
+
+  it("lets only the admin pause; pause blocks trading but not withdrawals", async () => {
+    await expectErr(
+      program.methods.setPaused(true).accounts({ admin: trader.publicKey } as any).signers([trader]).rpc(),
+      "ConstraintHasOne"
+    );
+    await program.methods.migrateConfig().accounts({ admin: provider.wallet.publicKey } as any).rpc(); // no-op on new layout
+    await program.methods.setPaused(true).accounts({ admin: provider.wallet.publicKey } as any).rpc();
+    await expectErr(
+      program.methods.swap(new BN(1_000_000), new BN(0), true)
+        .accounts({ launch: launchPda, treasury: treasury.publicKey, trader: trader.publicKey } as any)
+        .signers([trader]).rpc(),
+      "Paused"
+    );
+    await expectErr(
+      program.methods
+        .createLaunch(new BN(7), "Blocked", "BLK", new BN(1000 * ONE), new BN(0),
+          new BN(1_000_000), new BN(10_000_000), 3000, new BN(1), new BN(5), new BN(0), "")
+        .accounts({ creator: creator.publicKey } as any).signers([creator]).rpc(),
+      "Paused"
+    );
+    await program.methods.setPaused(false).accounts({ admin: provider.wallet.publicKey } as any).rpc();
+    await program.methods.swap(new BN(1_000_000), new BN(0), true)
+      .accounts({ launch: launchPda, treasury: treasury.publicKey, trader: trader.publicKey } as any)
+      .signers([trader]).rpc();
   });
 });

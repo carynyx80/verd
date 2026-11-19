@@ -621,6 +621,43 @@
           "signer": true
         },
         {
+          "name": "metadata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_metadata_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "token_metadata_program"
+            }
+          }
+        },
+        {
+          "name": "token_metadata_program",
+          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+        },
+        {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -677,6 +714,10 @@
         {
           "name": "lock_secs",
           "type": "i64"
+        },
+        {
+          "name": "uri",
+          "type": "string"
         }
       ]
     },
@@ -913,6 +954,53 @@
       ]
     },
     {
+      "name": "migrate_config",
+      "docs": [
+        "One-time upgrade of a config account created before `paused` existed."
+      ],
+      "discriminator": [
+        92,
+        131,
+        58,
+        105,
+        210,
+        154,
+        224,
+        193
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "place_order",
       "docs": [
         "Book-building: escrow SOL with a maximum acceptable price (as a tick index)."
@@ -928,6 +1016,24 @@
         106
       ],
       "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
         {
           "name": "launch",
           "writable": true
@@ -998,6 +1104,57 @@
         {
           "name": "max_tick",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "set_paused",
+      "docs": [
+        "Emergency switch. Blocks new launches, orders, the bell and trading.",
+        "Claims and order cancellations always keep working."
+      ],
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
         }
       ]
     },
@@ -1404,6 +1561,19 @@
       ]
     },
     {
+      "name": "PauseChanged",
+      "discriminator": [
+        238,
+        188,
+        213,
+        78,
+        134,
+        209,
+        178,
+        218
+      ]
+    },
+    {
       "name": "Swapped",
       "discriminator": [
         217,
@@ -1492,6 +1662,16 @@
       "code": 6014,
       "name": "MathOverflow",
       "msg": "Math overflow"
+    },
+    {
+      "code": 6015,
+      "name": "Paused",
+      "msg": "Stewra is paused for maintenance. Claims and refunds still work."
+    },
+    {
+      "code": 6016,
+      "name": "Unauthorized",
+      "msg": "Not authorized"
     }
   ],
   "types": [
@@ -1575,6 +1755,10 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
           }
         ]
       }
@@ -1800,6 +1984,18 @@
           {
             "name": "max_price",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PauseChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
           }
         ]
       }
