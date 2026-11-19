@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { BN } from "@anchor-lang/core";
@@ -126,105 +127,234 @@ export default function CreatePage() {
     router.push(`/launch/${launch.toBase58()}${ok2 ? "" : "?profile=missing"}`);
   }
 
-  const dur = (k: "roadshow" | "book" | "lock", label: string, hint: string) => (
-    <div className="field">
-      <label>{label}</label>
-      <div className="row" style={{ flexWrap: "nowrap" }}>
-        <input type="number" min="0" value={f[k]} onChange={set(k)} />
-        <select value={f[`${k}Unit` as "roadshowUnit"]} onChange={set(`${k}Unit` as "roadshowUnit")} style={{ maxWidth: 120 }}>
-          {Object.keys(UNITS).map((u) => <option key={u}>{u}</option>)}
+  const [tab, setTab] = useState<"write" | "preview">("write");
+
+  const n = (v: string) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const fmt = (v: number, max = 4) => v.toLocaleString(undefined, { maximumFractionDigits: max });
+  const durLabel = (v: string, u: Unit) => `${fmt(n(v), 1)} ${n(v) === 1 ? u.slice(0, -1) : u}`;
+
+  const feePct = config ? config.feeBps / 100 : 2;
+  const lpPct = n(f.lpPct);
+  const youPct = Math.max(0, 100 - feePct - lpPct);
+  const minRaise = n(f.saleTokens) * n(f.minPrice);
+  const maxRaise = n(f.saleTokens) * n(f.maxPrice);
+  const creatorTokens = Math.floor((n(f.saleTokens) * n(f.creatorPct)) / 100);
+
+  const checks: [string, boolean][] = [
+    ["Wallet connected", !!wallet],
+    ["Name and ticker", !!f.name.trim() && /^[A-Za-z0-9]{1,10}$/.test(f.symbol)],
+    ["Tagline and description", !!f.tagline.trim() && f.description.trim().length >= 10],
+    ["Prospectus", !!f.prospectus.trim()],
+  ];
+  const ready = checks.every(([, ok]) => ok);
+
+  const duration = (k: "roadshow" | "book" | "lock", label: string, hint: string) => (
+    <div className="ff">
+      <label htmlFor={`d-${k}`}>{label}</label>
+      <div className="ig">
+        <input id={`d-${k}`} type="number" min="0" inputMode="decimal" value={f[k]} onChange={set(k)} />
+        <select aria-label={`${label} unit`} value={f[`${k}Unit` as "roadshowUnit"]} onChange={set(`${k}Unit` as "roadshowUnit")}>
+          {Object.keys(UNITS).map((u) => <option key={u} value={u}>{u}</option>)}
         </select>
       </div>
-      <span className="hint">{hint}</span>
+      <span className="ff-hint">{hint}</span>
     </div>
   );
 
   return (
-    <div className="stack" style={{ padding: "28px 0" }}>
-      <div>
-        <h1 style={{ margin: "0 0 6px", letterSpacing: "-.8px" }}>File your agent&apos;s IPO</h1>
-        <p className="muted" style={{ margin: 0 }}>Takes a few minutes. Everything about the sale is enforced by the Stewra program on Solana.</p>
-      </div>
+    <div className="cf">
+      <header className="cf-head">
+        <nav className="crumbs" aria-label="Breadcrumb">
+          <Link href="/#listings">Listings</Link><span aria-hidden>/</span><span>New IPO</span>
+        </nav>
+        <h1>File an IPO</h1>
+        <p>Describe your agent, set the sale terms, and publish. The sale rules are enforced on-chain once filed.</p>
+      </header>
 
-      <div className="grid2">
-        <div className="stack">
-          <div className="panel form-grid">
-            <h2 className="full">The agent</h2>
-            <div className="field"><label>Name</label><input value={f.name} onChange={set("name")} maxLength={32} placeholder="Oracle Agent" /></div>
-            <div className="field"><label>Ticker</label><input value={f.symbol} onChange={set("symbol")} maxLength={10} placeholder="ORCL" /></div>
-            <div className="field full"><label>Tagline</label><input value={f.tagline} onChange={set("tagline")} maxLength={120} placeholder="Finds mispriced prediction markets before anyone else" /></div>
-            <div className="field full">
-              <label>What does it do?</label>
-              <textarea value={f.description} onChange={set("description")} maxLength={2000} placeholder="What the agent does, who it's for, and how it makes or could make money." />
+      <div className="cf-grid">
+        <div className="cf-form">
+          <section className="fs">
+            <div className="fs-label">
+              <h2>Agent</h2>
+              <p>How your agent appears in listings and on its IPO page.</p>
             </div>
-            <div className="field full">
-              <label>Personality for the live Q&amp;A</label>
-              <textarea value={f.persona} onChange={set("persona")} maxLength={2000} placeholder="How should your agent talk and answer questions in its roadshow? e.g. Confident, concise, likes showing quick demos." />
-              <span className="hint">The roadshow agent follows this, plus Stewra&apos;s honesty rules (no promises of profit).</span>
-            </div>
-            <div className="field"><label>Website (optional)</label><input value={f.website} onChange={set("website")} placeholder="https://" /></div>
-            <div className="field">
-              <label>Icon</label>
-              <div className="row" style={{ gap: 6 }}>
-                {EMOJIS.map((e) => (
-                  <button key={e} type="button" className="btn sm" onClick={() => setF({ ...f, emoji: e })}
-                    style={{ borderColor: f.emoji === e ? "var(--green)" : undefined, padding: "0 8px" }}>{e}</button>
-                ))}
+            <div className="fs-body">
+              <div className="ff-row">
+                <div className="ff">
+                  <label htmlFor="name">Name</label>
+                  <input id="name" value={f.name} onChange={set("name")} maxLength={32} placeholder="Oracle Agent" autoComplete="off" />
+                </div>
+                <div className="ff ff-narrow">
+                  <label htmlFor="symbol">Ticker</label>
+                  <div className="ig">
+                    <span className="ig-affix">$</span>
+                    <input id="symbol" value={f.symbol} onChange={(e) => setF({ ...f, symbol: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })} maxLength={10} placeholder="ORCL" autoComplete="off" spellCheck={false} />
+                  </div>
+                </div>
+              </div>
+              <div className="ff">
+                <div className="ff-top"><label htmlFor="tagline">Tagline</label><span className="ff-count">{f.tagline.length}/120</span></div>
+                <input id="tagline" value={f.tagline} onChange={set("tagline")} maxLength={120} placeholder="Flags mispriced prediction markets in real time" />
+              </div>
+              <div className="ff">
+                <div className="ff-top"><label htmlFor="desc">Description</label><span className="ff-count">{f.description.length}/2000</span></div>
+                <textarea id="desc" value={f.description} onChange={set("description")} maxLength={2000} rows={4}
+                  placeholder="What it does, who it's for, and how it earns or plans to earn." />
+              </div>
+              <div className="ff-row">
+                <div className="ff">
+                  <span className="ff-label" id="avatar-label">Avatar</span>
+                  <div className="swatches" role="radiogroup" aria-labelledby="avatar-label">
+                    {EMOJIS.map((e) => (
+                      <button key={e} type="button" role="radio" aria-checked={f.emoji === e} className={f.emoji === e ? "on" : ""} onClick={() => setF({ ...f, emoji: e })}>{e}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="ff">
+                <label htmlFor="website">Website <span className="opt">Optional</span></label>
+                <input id="website" type="url" value={f.website} onChange={set("website")} placeholder="https://" />
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="panel form-grid">
-            <h2 className="full">The sale</h2>
-            <div className="field"><label>Tokens for sale</label><input type="number" value={f.saleTokens} onChange={set("saleTokens")} /></div>
-            <div className="field">
-              <label>Creator share (% of sale, max 25)</label><input type="number" value={f.creatorPct} onChange={set("creatorPct")} />
+          <section className="fs">
+            <div className="fs-label">
+              <h2>Roadshow</h2>
+              <p>Your agent answers public questions before orders open. It never promises returns.</p>
             </div>
-            <div className="field"><label>Min price (SOL per token)</label><input type="number" step="any" value={f.minPrice} onChange={set("minPrice")} /></div>
-            <div className="field"><label>Max price (SOL per token)</label><input type="number" step="any" value={f.maxPrice} onChange={set("maxPrice")} /></div>
-            <div className="field full">
-              <label>Share of money raised locked as trading liquidity (10–50%)</label>
-              <input type="number" value={f.lpPct} onChange={set("lpPct")} />
-              <span className="hint">
-                Platform fee {config ? config.feeBps / 100 : "…"}% · liquidity {f.lpPct}% · you receive {config ? (100 - config.feeBps / 100 - Number(f.lpPct)).toFixed(1) : "…"}% of the raise.
-                Liquidity can never be withdrawn.
-              </span>
+            <div className="fs-body">
+              <div className="ff">
+                <div className="ff-top"><label htmlFor="persona">Voice and behaviour</label><span className="ff-count">{f.persona.length}/2000</span></div>
+                <textarea id="persona" value={f.persona} onChange={set("persona")} maxLength={2000} rows={3}
+                  placeholder="Direct and concise. Offers a short worked example when asked how it works." />
+              </div>
             </div>
-            <div className="full form-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-              {dur("roadshow", "Roadshow", "Live Q&A before orders open")}
-              {dur("book", "Order window", "Book-building period")}
-              {dur("lock", "Creator lockup", "Your tokens unlock after this")}
+          </section>
+
+          <section className="fs">
+            <div className="fs-label">
+              <h2>Sale terms</h2>
+              <p>Everyone pays one clearing price inside this range. Terms can&apos;t change after filing.</p>
             </div>
-          </div>
+            <div className="fs-body">
+              <div className="ff-row">
+                <div className="ff">
+                  <label htmlFor="supply">Tokens for sale</label>
+                  <div className="ig"><input id="supply" type="number" min="0" inputMode="numeric" value={f.saleTokens} onChange={set("saleTokens")} /><span className="ig-affix">tokens</span></div>
+                </div>
+                <div className="ff ff-narrow">
+                  <label htmlFor="creator">Creator share</label>
+                  <div className="ig"><input id="creator" type="number" min="0" max="25" inputMode="decimal" value={f.creatorPct} onChange={set("creatorPct")} /><span className="ig-affix">%</span></div>
+                  <span className="ff-hint">Max 25%, locked</span>
+                </div>
+              </div>
+              <div className="ff">
+                <span className="ff-label">Price range per token</span>
+                <div className="range-pair">
+                  <div className="ig"><span className="ig-affix">Min</span><input aria-label="Minimum price" type="number" step="any" min="0" inputMode="decimal" value={f.minPrice} onChange={set("minPrice")} /><span className="ig-affix">SOL</span></div>
+                  <span className="range-sep" aria-hidden>–</span>
+                  <div className="ig"><span className="ig-affix">Max</span><input aria-label="Maximum price" type="number" step="any" min="0" inputMode="decimal" value={f.maxPrice} onChange={set("maxPrice")} /><span className="ig-affix">SOL</span></div>
+                </div>
+              </div>
+              <div className="ff">
+                <div className="ff-top"><label htmlFor="lp">Locked liquidity</label><span className="ff-value mono">{lpPct}% of raise</span></div>
+                <input id="lp" className="slider" type="range" min="10" max="50" step="5" value={f.lpPct} onChange={set("lpPct")} />
+                <div className="split" aria-hidden>
+                  <span style={{ width: `${feePct}%` }} className="s-fee" />
+                  <span style={{ width: `${lpPct}%` }} className="s-lp" />
+                  <span style={{ width: `${youPct}%` }} className="s-you" />
+                </div>
+                <div className="split-legend">
+                  <span><i className="s-fee" />Platform {fmt(feePct, 1)}%</span>
+                  <span><i className="s-lp" />Liquidity {lpPct}%</span>
+                  <span><i className="s-you" />You {fmt(youPct, 1)}%</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="fs">
+            <div className="fs-label">
+              <h2>Schedule</h2>
+              <p>The bell can be rung by anyone once the order window closes.</p>
+            </div>
+            <div className="fs-body">
+              <div className="ff-row ff-row-3">
+                {duration("roadshow", "Roadshow", "Q&A before orders")}
+                {duration("book", "Order window", "Orders and cancels")}
+                {duration("lock", "Creator lockup", "Starts at the bell")}
+              </div>
+            </div>
+          </section>
+
+          <section className="fs">
+            <div className="fs-label">
+              <h2>Prospectus</h2>
+              <p>Short and plain. Use <code>## Heading</code> lines and <code>- </code> bullets.</p>
+            </div>
+            <div className="fs-body">
+              <div className="editor">
+                <div className="editor-bar">
+                  <div className="seg sm" role="tablist">
+                    <button role="tab" aria-selected={tab === "write"} className={tab === "write" ? "on" : ""} onClick={() => setTab("write")}><span className="seg-label">Write</span></button>
+                    <button role="tab" aria-selected={tab === "preview"} className={tab === "preview" ? "on" : ""} onClick={() => setTab("preview")}><span className="seg-label">Preview</span></button>
+                  </div>
+                  <span className="spacer" />
+                  <button className="btn sm ghost" type="button" onClick={draft} disabled={drafting}>{drafting ? "Generating…" : "Generate draft"}</button>
+                </div>
+                {tab === "write" ? (
+                  <textarea aria-label="Prospectus" className="editor-area" value={f.prospectus} onChange={set("prospectus")} maxLength={6000} rows={12}
+                    placeholder={"## Overview\nOne or two sentences.\n\n## Risks\n- Signals can be wrong"} />
+                ) : (
+                  <div className="editor-preview">
+                    {f.prospectus.trim() ? <Prospectus text={f.prospectus} /> : <p className="muted">Nothing to preview yet.</p>}
+                  </div>
+                )}
+              </div>
+              {draftErr && <div className="note err">{draftErr}</div>}
+            </div>
+          </section>
         </div>
 
-        <div className="stack" style={{ position: "sticky", top: 80 }}>
-          <div className="panel">
-            <div className="row" style={{ marginBottom: 10 }}>
-              <h2 style={{ margin: 0 }}>Prospectus</h2>
-              <span className="spacer" />
-              <button className="btn sm" onClick={draft} disabled={drafting}>{drafting ? "Drafting…" : "✨ Draft with AI"}</button>
+        <aside className="cf-aside">
+          <div className="sum">
+            <div className="sum-preview">
+              <div className="avatar">{f.emoji}</div>
+              <div style={{ minWidth: 0 }}>
+                <div className="sum-name">{f.name.trim() || "Untitled agent"} {f.symbol && <span className="mono muted">${f.symbol}</span>}</div>
+                <div className="sum-tag">{f.tagline.trim() || "Your tagline appears here"}</div>
+              </div>
             </div>
-            {draftErr && <div className="note err" style={{ marginBottom: 10 }}>{draftErr}</div>}
-            <div className="field">
-              <textarea value={f.prospectus} onChange={set("prospectus")} style={{ minHeight: 220 }} maxLength={6000}
-                placeholder={"## Overview\n...\n## Risks\n- ..."} />
-            </div>
-            {f.prospectus && (
-              <details style={{ marginTop: 10 }}>
-                <summary className="muted" style={{ cursor: "pointer" }}>Preview</summary>
-                <Prospectus text={f.prospectus} />
-              </details>
-            )}
-          </div>
-          <div className="panel stack">
-            <button className="btn primary" onClick={submit} disabled={tx.state.kind === "pending"}>File IPO</button>
+
+            <dl className="sum-list">
+              <div><dt>For sale</dt><dd className="mono">{fmt(n(f.saleTokens), 0)}</dd></div>
+              <div><dt>Price</dt><dd className="mono">{fmt(n(f.minPrice), 6)}–{fmt(n(f.maxPrice), 6)} SOL</dd></div>
+              <div><dt>Raise</dt><dd className="mono">{fmt(minRaise, 2)}–{fmt(maxRaise, 2)} SOL</dd></div>
+              <div><dt>You receive</dt><dd className="mono">up to {fmt((maxRaise * youPct) / 100, 2)} SOL</dd></div>
+              <div><dt>Creator tokens</dt><dd className="mono">{fmt(creatorTokens, 0)}</dd></div>
+            </dl>
+
+            <ol className="sum-time">
+              <li><span>Roadshow</span><b>{durLabel(f.roadshow, f.roadshowUnit)}</b></li>
+              <li><span>Order window</span><b>{durLabel(f.book, f.bookUnit)}</b></li>
+              <li><span>Bell and trading</span><b>instant</b></li>
+              <li><span>Creator unlock</span><b>+{durLabel(f.lock, f.lockUnit)}</b></li>
+            </ol>
+
+            <ul className="sum-checks">
+              {checks.map(([label, ok]) => (
+                <li key={label} className={ok ? "ok" : ""}><span className="chk" aria-hidden />{label}</li>
+              ))}
+            </ul>
+
+            <button className="btn primary sum-cta" onClick={submit} disabled={tx.state.kind === "pending"}>
+              {tx.state.kind === "pending" ? "Filing…" : ready ? "File IPO" : "Review and file"}
+            </button>
             <TxNote state={tx.state} />
-            <span className="muted" style={{ fontSize: 12 }}>
-              Filing costs a small amount of SOL for on-chain storage. You&apos;ll sign twice: once to file, once to publish the profile.
-            </span>
+            <p className="sum-foot">Two signatures: one to file on-chain, one to publish the profile. Filing costs a small amount of SOL for storage.</p>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );
