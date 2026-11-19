@@ -21,7 +21,8 @@ tests/verd.ts              Full-lifecycle tests on a local validator (11 tests)
 scripts/localnet.sh        Starts a local validator with Verd loaded and sets up the platform
 scripts/init-config.mjs    One-time platform setup on any network (fees, treasury, minimum lockup)
 scripts/sim-orders.mjs     Dev helper: places orders from test wallets
-app/                       Website (Next.js): listings, filing, roadshow, order book, bell, trading
+app/                       Frontend (Next.js, deployed on Vercel): listings, filing, roadshow, order book, bell, trading
+server/                    Backend (Express, deployed on Railway): agent profiles, roadshow Q&A via Claude, prospectus drafts
 ```
 
 ### How the fair price works
@@ -54,7 +55,13 @@ Start a local chain with Verd deployed (keep this running):
 ./scripts/localnet.sh
 ```
 
-In a second terminal, start the website:
+In a second terminal, start the backend (put `ANTHROPIC_API_KEY=...` in `server/.env` first):
+
+```bash
+cd server && npm install && npm run dev
+```
+
+In a third terminal, start the website:
 
 ```bash
 cd app && cp .env.example .env.local && npm install && npm run dev
@@ -63,7 +70,7 @@ cd app && cp .env.example .env.local && npm install && npm run dev
 Open http://localhost:3000, click **Select Wallet → Burner Wallet** (a throwaway test wallet that only exists on localnet), then **Get test SOL**.
 On localnet the create form defaults to minutes-long phases, so you can run a whole IPO in about 5 minutes.
 
-Add your Claude API key to `app/.env.local` (`ANTHROPIC_API_KEY=...`) so the roadshow agents can answer questions and "Draft with AI" can write prospectuses. Without it, both show a clear "not configured" message and everything else works.
+Add your Claude API key to `server/.env` (`ANTHROPIC_API_KEY=...`) so the roadshow agents can answer questions and "Draft with AI" can write prospectuses. Without it, both show a clear "not configured" message and everything else works.
 
 To simulate other buyers during the order window:
 
@@ -98,18 +105,28 @@ Then set `NEXT_PUBLIC_CLUSTER=devnet` and `NEXT_PUBLIC_RPC_URL=https://api.devne
 - **Security audit** of `programs/verd`. It holds user funds.
 - Set a real minimum creator lockup: `--min-lock-days 90`.
 - Use a dedicated treasury wallet (ideally a multisig), and consider transferring the program upgrade authority to a multisig.
-- Replace the JSON file store in `app/src/lib/store.ts` (agent profiles and roadshow transcripts) with a real database before running more than one server.
+- Replace the JSON file store in `server/src/store.ts` (agent profiles and roadshow transcripts) with a real database before running more than one server.
 - Use a paid RPC provider (Helius, Triton, etc.) instead of the public endpoint.
 - Legal: you've done your legal review. Keep geoblocking and terms in line with it.
 - Token metadata (name and logo inside wallets) isn't set yet. Add Metaplex metadata in `create_launch` if you want tokens to display nicely in Phantom.
+
+## Hosting
+
+- **Frontend → Vercel** (project `verd`, root directory `app`). Deploys automatically on every push to `main`.
+- **Backend → Railway** (project `verd`, service `verd-server`, root directory `/server`, volume mounted at `/data`). Deploys automatically on pushes that touch `server/`.
 
 ## Configuration
 
 | Variable | Where | Meaning |
 |---|---|---|
-| `NEXT_PUBLIC_CLUSTER` | app | `localnet`, `devnet` or `mainnet-beta` |
-| `NEXT_PUBLIC_RPC_URL` | app | Solana RPC endpoint |
-| `NEXT_PUBLIC_PROGRAM_ID` | app | Deployed Verd program id |
-| `ANTHROPIC_API_KEY` | app (server only) | Claude API key for roadshow Q&A and prospectus drafts |
+| `NEXT_PUBLIC_CLUSTER` | Vercel | `localnet`, `devnet` or `mainnet-beta` |
+| `NEXT_PUBLIC_RPC_URL` | Vercel | Solana RPC endpoint |
+| `NEXT_PUBLIC_PROGRAM_ID` | Vercel | Deployed Verd program id |
+| `NEXT_PUBLIC_API_URL` | Vercel | Backend URL (the Railway domain) |
+| `ANTHROPIC_API_KEY` | Railway | Claude API key for roadshow Q&A and prospectus drafts |
+| `RPC_URL` | Railway | Solana RPC endpoint the backend reads launches from |
+| `PROGRAM_ID` | Railway | Deployed Verd program id |
+| `CORS_ORIGINS` | Railway | Comma-separated frontend URLs allowed to call the API |
+| `DATA_DIR` | Railway | Where profiles and transcripts are stored (`/data` volume) |
 
 Program id (local and default): `3ty1t4idNWNRgVFzwoTqYKZBz2SLTaLtYv6WbGEe3nzN`. For your own deployment, generate a new keypair with `solana-keygen new -o target/deploy/verd-keypair.json`, then run `anchor keys sync` and `anchor build`.
