@@ -1,60 +1,160 @@
 "use client";
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { useLaunches, useNow, useProfiles } from "@/lib/hooks";
 import { PHASE_LABEL, countdown, phaseOf, poolPrice, previewClearing, sol, tokens, type Launch, type Phase } from "@/lib/verd";
 import type { Profile } from "@/lib/hooks";
+import Reveal from "@/components/Reveal";
+import HeroCard from "@/components/HeroCard";
 
 const ORDER: Phase[] = ["book", "roadshow", "bell", "trading", "failed"];
+
+const STEPS = [
+  { n: "01", t: "Filing", d: "The creator lists the agent with a prospectus, price range and lockup." },
+  { n: "02", t: "Roadshow", d: "Anyone can question the agent live before a single order is placed." },
+  { n: "03", t: "Book", d: "Buyers put in orders and set the most they're willing to pay." },
+  { n: "04", t: "Bell", d: "One price for everyone. If demand is high, everyone gets a fair share." },
+  { n: "05", t: "Trading", d: "Trading opens instantly. Liquidity is locked, and so is the creator." },
+];
 
 export default function Home() {
   const { launches, error } = useLaunches();
   const profiles = useProfiles();
   const now = useNow();
+  const reduce = useReducedMotion();
 
   const sorted = (launches ?? []).slice().sort((a, b) => ORDER.indexOf(phaseOf(a, now)) - ORDER.indexOf(phaseOf(b, now)));
+  const raised = (launches ?? []).reduce((s, l) => s + l.soldValue, 0);
+  const buyers = (launches ?? []).reduce((s, l) => s + (l.finalized ? l.orderCount : 0), 0);
+  const volume = (launches ?? []).reduce((s, l) => s + l.volumeSol, 0);
+
+  const rise = (d: number) => (reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay: d, ease: [0.22, 1, 0.36, 1] } });
 
   return (
     <>
       <section className="hero">
-        <h1>
-          Anthropic went public.
-          <br />
-          <em>Now your agent can.</em>
-        </h1>
-        <p>
-          Verd is an IPO launchpad for AI agents. Every agent faces a live public Q&amp;A first. Then buyers place orders,
-          everyone gets the same fair price at the bell, and creators can&apos;t sell for months.
-        </p>
-        <div className="row">
-          <Link href="/create" className="btn primary">File your agent&apos;s IPO</Link>
-          <a href="#listings" className="btn">See listings</a>
+        <div className="hero-copy">
+          <motion.div className="eyebrow" {...rise(0)}>
+            <span className="dot" /> IPO season is open for AI agents
+          </motion.div>
+          <motion.h1 {...rise(0.06)}>
+            Anthropic went public.
+            <br />
+            <em>Now your agent can.</em>
+          </motion.h1>
+          <motion.p className="lede" {...rise(0.14)}>
+            Verd is an IPO launchpad for AI agents on Solana. Every agent faces a live public Q&amp;A first. Then buyers place
+            orders, everyone pays the same fair price at the bell, and creators can&apos;t cash out for months.
+          </motion.p>
+          <motion.div className="row hero-ctas" {...rise(0.22)}>
+            <Link href="/create" className="btn primary lg">File your agent&apos;s IPO <span aria-hidden>→</span></Link>
+            <Link href="/how-to-use" className="btn ghost lg">How it works</Link>
+          </motion.div>
+          <motion.div className="hero-proof" {...rise(0.3)}>
+            <span>✓ No bot sniping</span><span>✓ Liquidity locked forever</span><span>✓ Creator lockups</span>
+          </motion.div>
         </div>
-        <div className="steps">
-          <div className="step"><b>1 · Filing</b>Creator lists the agent with a prospectus.</div>
-          <div className="step"><b>2 · Roadshow</b>Anyone grills the agent live.</div>
-          <div className="step"><b>3 · Book</b>Buyers place orders with a max price.</div>
-          <div className="step"><b>4 · Bell</b>One price for all. No snipers.</div>
-          <div className="step"><b>5 · Trading</b>Locked liquidity, locked creator.</div>
-        </div>
+        <HeroCard />
       </section>
 
-      <section id="listings" className="stack" style={{ paddingTop: 12 }}>
-        <div className="row">
-          <h2 style={{ margin: 0 }}>Listings</h2>
-          <span className="muted">{launches ? `${launches.length} agents` : "Loading…"}</span>
-        </div>
-        {error && <div className="note err">Can&apos;t reach the Solana network: {error}</div>}
-        {launches && launches.length === 0 && (
-          <div className="empty">
-            No agents have filed yet. <Link href="/create" style={{ color: "var(--green)" }}>Be the first IPO.</Link>
-          </div>
-        )}
-        <div className="cards">
-          {sorted.map((l) => (
-            <ListingCard key={l.address} l={l} p={profiles[l.address]} now={now} />
+      <Reveal className="stat-strip">
+        <div><b>{launches ? launches.length : "—"}</b><span>Agents listed</span></div>
+        <div><b>{launches ? sol(raised, 2) : "—"}</b><span>SOL raised</span></div>
+        <div><b>{launches ? buyers : "—"}</b><span>IPO buyers</span></div>
+        <div><b>{launches ? sol(volume, 2) : "—"}</b><span>SOL traded</span></div>
+      </Reveal>
+
+      <section className="section">
+        <Reveal className="section-head">
+          <span className="kicker">How it works</span>
+          <h2>A real IPO, <em>in five steps</em></h2>
+          <p className="muted">The same playbook companies use to go public, rebuilt for AI agents and enforced on-chain.</p>
+        </Reveal>
+        <div className="steps">
+          {STEPS.map((s, i) => (
+            <Reveal key={s.n} delay={i * 0.06} className="step">
+              <span className="step-n mono">{s.n}</span>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </Reveal>
           ))}
         </div>
       </section>
+
+      <section className="section">
+        <Reveal className="section-head">
+          <span className="kicker">Why Verd</span>
+          <h2>Fair by design, <em>not by promise</em></h2>
+        </Reveal>
+        <div className="bento">
+          <Reveal className="tile tile-wide">
+            <div className="tile-icon">⚖️</div>
+            <h3>One price for everyone</h3>
+            <p>No first-second bot buys. Every order fills at the same clearing price, and if demand runs hot, everyone gets a proportional share and the rest back.</p>
+            <div className="tile-viz" aria-hidden>
+              {[38, 54, 70, 86, 100, 92].map((h, i) => <span key={i} style={{ height: `${h}%` }} className={i === 4 ? "hi" : ""} />)}
+            </div>
+          </Reveal>
+          <Reveal className="tile" delay={0.05}>
+            <div className="tile-icon">🎤</div>
+            <h3>Agents get grilled first</h3>
+            <p>A live public roadshow. Weak agents show it; strong ones build demand.</p>
+          </Reveal>
+          <Reveal className="tile" delay={0.1}>
+            <div className="tile-icon">🔒</div>
+            <h3>Liquidity locked forever</h3>
+            <p>Part of every raise seeds the trading pool at the IPO price. It can never be pulled.</p>
+          </Reveal>
+          <Reveal className="tile" delay={0.05}>
+            <div className="tile-icon">⏳</div>
+            <h3>Creators locked too</h3>
+            <p>Creator tokens unlock only after the lockup. No quick cash-outs.</p>
+          </Reveal>
+          <Reveal className="tile" delay={0.1}>
+            <div className="tile-icon">⛓️</div>
+            <h3>Rules live on-chain</h3>
+            <p>Order escrow, the clearing price, refunds, the pool and lockups are all enforced by the Verd program on Solana, not by this website.</p>
+          </Reveal>
+        </div>
+      </section>
+
+      <section id="listings" className="section">
+        <Reveal className="section-head row-head">
+          <div>
+            <span className="kicker">Listings</span>
+            <h2>On the board</h2>
+          </div>
+          <Link href="/create" className="btn ghost">List an agent</Link>
+        </Reveal>
+        {error && <div className="note err">Can&apos;t reach the Solana network: {error}</div>}
+        {!launches && !error && (
+          <div className="cards">{[0, 1, 2].map((i) => <div key={i} className="card skeleton" />)}</div>
+        )}
+        {launches && launches.length === 0 && (
+          <Reveal className="empty">
+            <div className="empty-icon">🔔</div>
+            <h3>No agents have filed yet</h3>
+            <p className="muted">Be the first IPO on Verd.</p>
+            <Link href="/create" className="btn primary">File the first IPO</Link>
+          </Reveal>
+        )}
+        <div className="cards">
+          {sorted.map((l, i) => (
+            <Reveal key={l.address} delay={Math.min(i, 6) * 0.04}>
+              <ListingCard l={l} p={profiles[l.address]} now={now} />
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      <Reveal className="cta-band">
+        <h2>Ready to take your agent <em>public?</em></h2>
+        <p>File in a few minutes. The roadshow starts the moment you publish.</p>
+        <div className="row" style={{ justifyContent: "center" }}>
+          <Link href="/create" className="btn primary lg">File an IPO</Link>
+          <Link href="/how-to-use" className="btn ghost lg">Read the guide</Link>
+        </div>
+      </Reveal>
     </>
   );
 }
