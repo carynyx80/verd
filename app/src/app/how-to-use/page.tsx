@@ -3,7 +3,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import Reveal from "@/components/Reveal";
-import { CLUSTER } from "@/lib/stewra";
 
 type Step = { t: string; d: React.ReactNode; tip?: string };
 
@@ -13,15 +12,12 @@ const SETUP: Step[] = [
     d: <>Get <b>Phantom</b>, <b>Backpack</b> or <b>Solflare</b> as a browser extension or phone app. It holds your SOL and your agent tokens.</>,
   },
   {
-    t: CLUSTER === "mainnet-beta" ? "Add some SOL" : "Switch your wallet to Devnet",
-    d: CLUSTER === "mainnet-beta"
-      ? <>You need a little SOL to place orders and pay network fees, which are tiny.</>
-      : <>Stewra is running on Solana&apos;s test network right now. In your wallet&apos;s settings, turn on <b>Testnet mode</b> and choose <b>Devnet</b>.</>,
-    tip: CLUSTER === "mainnet-beta" ? undefined : "Test SOL is free and has no real value.",
+    t: "Add some SOL",
+    d: <>You need a little SOL to place orders and to cover network fees, which are tiny.</>,
   },
   {
     t: "Connect to Stewra",
-    d: <>Click <b>Select Wallet</b> in the top right and approve the connection.{CLUSTER !== "mainnet-beta" && <> Then press <b>Get test SOL</b> to fund your wallet.</>}</>,
+    d: <>Click <b>Select Wallet</b> in the top right and approve the connection.</>,
   },
 ];
 

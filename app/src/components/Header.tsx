@@ -42,8 +42,7 @@ export default function Header() {
           ))}
         </nav>
         <div className="nav-right">
-          {CLUSTER !== "mainnet-beta" && <span className="net">{CLUSTER}</span>}
-          <Faucet />
+          {CLUSTER === "localnet" && <Faucet />}
           <WalletMultiButton />
           <button className="nav-burger" aria-label="Menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
             <span /><span />

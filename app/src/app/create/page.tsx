@@ -23,7 +23,7 @@ export default function CreatePage() {
   const { signMessage } = useWallet();
   const config = useConfig();
   const tx = useTx();
-  const dev = CLUSTER !== "mainnet-beta";
+  const dev = CLUSTER === "localnet"; // short phases only for local testing
 
   const [f, setF] = useState({
     name: "",
