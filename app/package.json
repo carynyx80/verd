@@ -1,0 +1,33 @@
+{
+  "name": "verd-web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000"
+  },
+  "dependencies": {
+    "@anchor-lang/core": "^0.32.2",
+    "@noble/curves": "^1.8.1",
+    "@noble/hashes": "^1.8.0",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/wallet-adapter-base": "^0.9.28",
+    "@solana/wallet-adapter-react": "^0.15.40",
+    "@solana/wallet-adapter-react-ui": "^0.9.40",
+    "@solana/wallet-adapter-unsafe-burner": "^0.1.7",
+    "@solana/web3.js": "^1.99.0",
+    "bs58": "^6.0.0",
+    "next": "15.1.6",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.8",
+    "typescript": "^5.7.3"
+  },
+  "overrides": {
+    "@types/react": "$@types/react"
+  }
+}
