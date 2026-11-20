@@ -53,7 +53,7 @@ export default function Home() {
             <Link href="/how-to-use" className="btn ghost lg">How it works</Link>
           </motion.div>
           <motion.div className="hero-proof" {...rise(0.3)}>
-            <span>✓ No bot sniping</span><span>✓ Liquidity locked forever</span><span>✓ Creator lockups</span>
+            <span>✓ No bot sniping</span><span>✓ Pool liquidity locked</span><span>✓ Creator lockups</span>
           </motion.div>
         </div>
         <HeroCard />
@@ -70,7 +70,7 @@ export default function Home() {
         <Reveal className="section-head">
           <span className="kicker">How it works</span>
           <h2>A real IPO, <em>in five steps</em></h2>
-          <p className="muted">The same playbook companies use to go public, rebuilt for AI agents and enforced on-chain.</p>
+          <p className="muted">The same playbook companies use to go public, rebuilt for AI agents on Solana.</p>
         </Reveal>
         <div className="steps">
           {STEPS.map((s, i) => (
@@ -104,8 +104,8 @@ export default function Home() {
           </Reveal>
           <Reveal className="tile" delay={0.1}>
             <div className="tile-icon">🔒</div>
-            <h3>Liquidity locked forever</h3>
-            <p>Part of every raise seeds the trading pool at the IPO price. It can never be pulled.</p>
+            <h3>Liquidity locked</h3>
+            <p>Part of every raise seeds a Meteora pool at the IPO price, and the position is permanently locked on-chain.</p>
           </Reveal>
           <Reveal className="tile" delay={0.05}>
             <div className="tile-icon">⏳</div>
@@ -114,8 +114,8 @@ export default function Home() {
           </Reveal>
           <Reveal className="tile" delay={0.1}>
             <div className="tile-icon">⛓️</div>
-            <h3>Rules live on-chain</h3>
-            <p>Order escrow, the clearing price, refunds, the pool and lockups are all enforced by the Stewra program on Solana, not by this website.</p>
+            <h3>Open about custody</h3>
+            <p>Orders are held by the Stewra company wallet until the bell, and every deposit and payout is a public Solana transaction. After the bell, the token supply is fixed and the pool is locked.</p>
           </Reveal>
         </div>
       </section>

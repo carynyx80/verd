@@ -2,11 +2,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { BN } from "@anchor-lang/core";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
 import { useBackend, useConfig } from "@/lib/hooks";
-import { CLUSTER, ONE_TOKEN, api, getProgram, imageUrl, launchPda } from "@/lib/stewra";
+import { CLUSTER, ONE_TOKEN, api, imageUrl, sol } from "@/lib/stewra";
 import { publishProfile } from "@/lib/publish";
 import { TxNote, useTx } from "@/lib/tx";
 import Prospectus from "@/components/Prospectus";
@@ -19,8 +18,8 @@ type Unit = keyof typeof UNITS;
 export default function CreatePage() {
   const router = useRouter();
   const { connection } = useConnection();
-  const wallet = useAnchorWallet();
-  const { signMessage } = useWallet();
+  const { publicKey, signMessage, signTransaction } = useWallet();
+  const wallet = publicKey && signTransaction ? { publicKey } : null;
   const config = useConfig();
   const { ai } = useBackend();
   const tx = useTx();
@@ -82,7 +81,8 @@ export default function CreatePage() {
 
   function validate(): string | null {
     if (!wallet) return "Connect your wallet first.";
-    if (!config) return "Stewra isn't set up on this network yet (missing platform config).";
+    if (!config) return "Couldn't reach Stewra. Try again in a moment.";
+    if (config.paused) return "Stewra is paused. New listings are on hold.";
     if (!f.name.trim() || f.name.length > 32) return "Name must be 1–32 characters.";
     if (!/^[A-Za-z0-9]{1,10}$/.test(f.symbol)) return "Ticker must be 1–10 letters or numbers.";
     if (!f.tagline.trim() || f.description.trim().length < 10) return "Add a tagline and a description.";
@@ -100,37 +100,49 @@ export default function CreatePage() {
   async function submit() {
     const problem = validate();
     if (problem) { tx.reset(); await tx.run("", async () => { throw new Error(problem); }); return; }
-    const program = getProgram(connection, wallet!);
-    const launchId = new BN(Date.now());
-    const launch = launchPda(wallet!.publicKey, launchId);
     const saleBase = Math.round(Number(f.saleTokens) * ONE_TOKEN);
     const creatorBase = Math.floor((saleBase * Number(f.creatorPct)) / 100);
+    let launch = "";
 
-    const ok = await tx.run("Filing on-chain — approve in your wallet", () =>
-      program.methods
-        .createLaunch(
-          launchId, f.name.trim(), f.symbol.toUpperCase(),
-          new BN(saleBase), new BN(creatorBase),
-          new BN(Math.round(Number(f.minPrice) * LAMPORTS_PER_SOL)),
-          new BN(Math.round(Number(f.maxPrice) * LAMPORTS_PER_SOL)),
-          Math.round(Number(f.lpPct) * 100),
-          new BN(Math.round(Number(f.roadshow) * UNITS[f.roadshowUnit])),
-          new BN(Math.round(Number(f.book) * UNITS[f.bookUnit])),
-          new BN(lockSecs),
-          api(`/metadata/${launch.toBase58()}.json`)
-        )
-        .accounts({ creator: wallet!.publicKey } as never)
-        .rpc()
-    );
+    const ok = await tx.run("Filing — approve in your wallet", async () => {
+      const res = await fetch(api("/api/launches/prepare"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          creator: publicKey!.toBase58(), name: f.name.trim(), symbol: f.symbol.toUpperCase(),
+          saleSupply: String(saleBase), creatorSupply: String(creatorBase),
+          minPrice: String(Math.round(Number(f.minPrice) * LAMPORTS_PER_SOL)),
+          maxPrice: String(Math.round(Number(f.maxPrice) * LAMPORTS_PER_SOL)),
+          lpBps: Math.round(Number(f.lpPct) * 100),
+          roadshowSecs: Math.round(Number(f.roadshow) * UNITS[f.roadshowUnit]),
+          orderSecs: Math.round(Number(f.book) * UNITS[f.bookUnit]),
+          lockSecs,
+        }),
+      });
+      const prep = await res.json();
+      if (!res.ok) throw new Error(prep.error || "Couldn't prepare the filing");
+      launch = prep.launch;
+      // The creator signs locally and we broadcast the exact bytes, so the server's partial signature stays valid.
+      const signed = await signTransaction!(Transaction.from(Buffer.from(prep.tx, "base64")));
+      const sig = await connection.sendRawTransaction(signed.serialize());
+      await connection.confirmTransaction({ signature: sig, blockhash: signed.recentBlockhash!, lastValidBlockHeight: prep.lastValidBlockHeight }, "confirmed");
+      // Wait for finality so the listing is activated server-side before the profile is published.
+      for (let i = 0; i < 40; i++) {
+        const c = await fetch(api(`/api/launches/${launch}/confirm`), { method: "POST" }).then((r) => r.json()).catch(() => ({}));
+        if (c.status === "live") return sig;
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      throw new Error("Filed, but it's taking a while to finalize. Refresh in a minute.");
+    });
     if (!ok) return;
     const ok2 = await tx.run("Filed! Now sign to publish the agent's profile", () =>
-      publishProfile(launch.toBase58(), {
+      publishProfile(launch, {
         tagline: f.tagline.trim(), description: f.description.trim(), persona: f.persona.trim(),
         prospectus: f.prospectus.trim(), website: f.website.trim(), emoji: f.emoji, logo: f.logo, banner: f.banner,
       }, signMessage).then(() => undefined)
     , "IPO filed");
     // Even if the profile step fails, the launch exists; its page lets the creator retry.
-    router.push(`/launch/${launch.toBase58()}${ok2 ? "" : "?profile=missing"}`);
+    router.push(`/launch/${launch}${ok2 ? "" : "?profile=missing"}`);
   }
 
   const [tab, setTab] = useState<"write" | "preview">("write");
@@ -175,7 +187,7 @@ export default function CreatePage() {
           <Link href="/#listings">Listings</Link><span aria-hidden>/</span><span>New IPO</span>
         </nav>
         <h1>File an IPO</h1>
-        <p>Describe your agent, set the sale terms, and publish. The sale rules are enforced on-chain once filed.</p>
+        <p>Describe your agent, set the sale terms, and publish. Orders are held by the Stewra company wallet until the bell; the pool is locked on Meteora.</p>
       </header>
 
       <div className="cf-grid">
@@ -282,7 +294,7 @@ export default function CreatePage() {
           <section className="fs">
             <div className="fs-label">
               <h2>Schedule</h2>
-              <p>The bell can be rung by anyone once the order window closes.</p>
+              <p>The bell rings automatically about a minute after the order window closes.</p>
             </div>
             <div className="fs-body">
               <div className="ff-row ff-row-3">
@@ -361,7 +373,7 @@ export default function CreatePage() {
               {tx.state.kind === "pending" ? "Filing…" : ready ? "File IPO" : "Review and file"}
             </button>
             <TxNote state={tx.state} />
-            <p className="sum-foot">Two signatures: one to file on-chain, one to publish the profile. Filing costs a small amount of SOL for storage.</p>
+            <p className="sum-foot">Two signatures: one to create your token and pay the listing fee{config ? ` (${sol(config.listingFee, 3)} SOL)` : ""} plus about 0.007 SOL of rent, one to publish the profile.</p>
           </div>
         </aside>
       </div>

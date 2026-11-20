@@ -1,24 +1,23 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useConnection } from "@solana/wallet-adapter-react";
-import { api, fetchLaunch, fetchLaunches, getProgram, configPda, type Launch } from "./stewra";
+import { api, fetchLaunch, fetchLaunches, type Launch } from "./stewra";
 
-// Offset between the cluster's clock (what the program checks) and this device's clock.
+// Offset between the Stewra server clock (which runs the schedule) and this device.
 // Shared across components and refreshed at most once a minute.
 let clockOffset = 0;
 let clockFetchedAt = 0;
 let clockInflight: Promise<void> | null = null;
 
-function syncClock(connection: ReturnType<typeof useConnection>["connection"]) {
+function syncClock() {
   if (clockInflight || Date.now() - clockFetchedAt < 60_000) return clockInflight;
   clockInflight = (async () => {
     try {
-      const slot = await connection.getSlot("confirmed");
-      const chain = await connection.getBlockTime(slot);
-      if (chain) clockOffset = chain - Date.now() / 1000;
+      const t0 = Date.now();
+      const d = await fetch(api("/health")).then((r) => r.json());
+      if (typeof d.now === "number") clockOffset = d.now - (t0 + Date.now()) / 2000;
       clockFetchedAt = Date.now();
     } catch {
-      // keep the previous offset; device clock is a fine fallback
+      // device clock is a fine fallback
     } finally {
       clockInflight = null;
     }
@@ -26,18 +25,17 @@ function syncClock(connection: ReturnType<typeof useConnection>["connection"]) {
   return clockInflight;
 }
 
-/** Current time in unix seconds, aligned to the Solana cluster clock. */
+/** Current time in unix seconds, aligned to the Stewra server. */
 export function useNow(intervalMs = 1000) {
-  const { connection } = useConnection();
   const [now, setNow] = useState(() => Date.now() / 1000 + clockOffset);
   useEffect(() => {
-    syncClock(connection);
+    syncClock();
     const t = setInterval(() => {
-      syncClock(connection);
+      syncClock();
       setNow(Date.now() / 1000 + clockOffset);
     }, intervalMs);
     return () => clearInterval(t);
-  }, [intervalMs, connection]);
+  }, [intervalMs]);
   return now;
 }
 
@@ -51,17 +49,16 @@ export function useBackend() {
 }
 
 export function useLaunches(pollMs = 6000) {
-  const { connection } = useConnection();
   const [launches, setLaunches] = useState<Launch[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
     try {
-      setLaunches(await fetchLaunches(connection));
+      setLaunches(await fetchLaunches());
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [connection]);
+  }, []);
   useEffect(() => {
     load();
     const t = setInterval(load, pollMs);
@@ -71,15 +68,14 @@ export function useLaunches(pollMs = 6000) {
 }
 
 export function useLaunch(address: string, pollMs = 4000) {
-  const { connection } = useConnection();
   const [launch, setLaunch] = useState<Launch | null | undefined>(undefined);
   const load = useCallback(async () => {
     try {
-      setLaunch(await fetchLaunch(connection, address));
+      setLaunch(await fetchLaunch(address));
     } catch {
-      setLaunch(null);
+      setLaunch((cur) => cur ?? null);
     }
-  }, [connection, address]);
+  }, [address]);
   useEffect(() => {
     load();
     const t = setInterval(load, pollMs);
@@ -88,23 +84,19 @@ export function useLaunch(address: string, pollMs = 4000) {
   return { launch, reload: load };
 }
 
-export type PlatformConfig = { feeBps: number; swapFeeBps: number; minLockSecs: number; treasury: string; paused: boolean };
+export type PlatformConfig = {
+  network: string; company: string | null; feeBps: number; swapFeeBps: number; minLockSecs: number;
+  listingFee: number; paused: boolean; payoutMode: string;
+};
 
 export function useConfig() {
-  const { connection } = useConnection();
   const [config, setConfig] = useState<PlatformConfig | null>(null);
   useEffect(() => {
-    getProgram(connection)
-      .account.config.fetchNullable(configPda())
-      .then((c) =>
-        setConfig(
-          c
-            ? { feeBps: c.feeBps, swapFeeBps: c.swapFeeBps, minLockSecs: Number(c.minLockSecs.toString()), treasury: c.treasury.toBase58(), paused: Boolean(c.paused) }
-            : null
-        )
-      )
-      .catch(() => setConfig(null));
-  }, [connection]);
+    const load = () => fetch(api("/api/platform")).then((r) => r.json()).then(setConfig).catch(() => setConfig(null));
+    load();
+    const t = setInterval(load, 30_000);
+    return () => clearInterval(t);
+  }, []);
   return config;
 }
 

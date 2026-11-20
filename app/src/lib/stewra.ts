@@ -1,79 +1,52 @@
-import { AnchorProvider, BN, Program } from "@anchor-lang/core";
-import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, type Transaction, type VersionedTransaction } from "@solana/web3.js";
-import idl from "@/idl/verd.json";
-import type { Verd } from "@/idl/verd";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-export const CLUSTER = process.env.NEXT_PUBLIC_CLUSTER || "localnet";
-export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8899";
+/** Solana network the site and wallets target. Production: mainnet-beta. */
+export const CLUSTER = process.env.NEXT_PUBLIC_SOLANA_NETWORK || process.env.NEXT_PUBLIC_CLUSTER || "mainnet-beta";
+const DEFAULT_RPC: Record<string, string> = {
+  "mainnet-beta": "https://api.mainnet-beta.solana.com",
+  devnet: "https://api.devnet.solana.com",
+  localnet: "http://127.0.0.1:8899",
+};
+export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC[CLUSTER] || DEFAULT_RPC["mainnet-beta"];
 /** Base URL of the Stewra backend (Railway). */
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/$/, "");
 export const api = (path: string) => `${API_URL}${path}`;
 /** Public URL of an uploaded image (logo or banner). */
 export const imageUrl = (id: string) => `${API_URL}/uploads/${id}`;
-
-export const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID || (idl as { address: string }).address);
+/** The company wallet built into this frontend. Orders are refused if the server reports a different one. */
+export const COMPANY_WALLET = process.env.NEXT_PUBLIC_COMPANY_WALLET_ADDRESS || "jdceA46wcDNdk2SSZoZTz3MWdM95n94Fh8EXPQQrR21";
 
 export const ONE_TOKEN = 1_000_000; // 10^6 base units
 export const NUM_TICKS = 10;
 export const BPS = 10_000;
 
-type IdlWithAddress = Verd & { address: string };
+// ───── listing shape served by the backend (numbers in lamports / base units) ─────
 
-/** Read-only wallet so pages can fetch accounts before anyone connects. */
-export type SignerWallet = {
-  publicKey: PublicKey;
-  signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T>;
-  signAllTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]>;
-};
-
-class ReadonlyWallet implements SignerWallet {
-  payer = Keypair.generate();
-  publicKey = this.payer.publicKey;
-  async signTransaction<T extends Transaction | VersionedTransaction>(): Promise<T> {
-    throw new Error("Connect a wallet first");
-  }
-  async signAllTransactions<T extends Transaction | VersionedTransaction>(): Promise<T[]> {
-    throw new Error("Connect a wallet first");
-  }
-}
-
-export function getProgram(connection: Connection, wallet?: SignerWallet | null): Program<Verd> {
-  const provider = new AnchorProvider(connection, (wallet ?? new ReadonlyWallet()) as ConstructorParameters<typeof AnchorProvider>[1], { commitment: "confirmed" });
-  const withAddr = { ...(idl as IdlWithAddress), address: PROGRAM_ID.toBase58() };
-  return new Program<Verd>(withAddr as Verd, provider);
-}
-
-const pda = (seeds: (Buffer | Uint8Array)[]) => PublicKey.findProgramAddressSync(seeds, PROGRAM_ID)[0];
-export const configPda = () => pda([Buffer.from("config")]);
-export const launchPda = (creator: PublicKey, id: BN) =>
-  pda([Buffer.from("launch"), creator.toBuffer(), id.toArrayLike(Buffer, "le", 8)]);
-export const mintPda = (launch: PublicKey) => pda([Buffer.from("mint"), launch.toBuffer()]);
-export const orderPda = (launch: PublicKey, buyer: PublicKey) =>
-  pda([Buffer.from("order"), launch.toBuffer(), buyer.toBuffer()]);
-
-// ───── account shapes (numbers converted for UI use) ─────
+export type LaunchStatus = "live" | "settling" | "trading" | "failed";
 
 export type Launch = {
-  address: string;
+  address: string; // = token mint
   creator: string;
   mint: string;
   launchId: string;
   name: string;
   symbol: string;
-  saleSupply: number; // base units
+  saleSupply: number;
   creatorSupply: number;
-  minPrice: number; // lamports per token
+  minPrice: number; // lamports per whole token
   maxPrice: number;
   lpBps: number;
   feeBps: number;
+  swapFeeBps: number;
   createdAt: number;
   roadshowEnd: number;
   orderEnd: number;
   lockSecs: number;
   lockUntil: number;
-  buckets: number[]; // lamports per tick
+  buckets: number[];
   totalBudget: number;
   orderCount: number;
+  status: LaunchStatus;
   finalized: boolean;
   clearingTick: number;
   clearingPrice: number;
@@ -81,68 +54,39 @@ export type Launch = {
   soldValue: number;
   tokensSold: number;
   creatorClaimed: boolean;
+  settle: { total: number; done: number };
+  pool: string | null;
   poolSol: number;
   poolTokens: number;
+  poolPrice: number;
   volumeSol: number;
 };
 
-const n = (v: BN | number) => (typeof v === "number" ? v : Number(v.toString()));
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function toLaunch(address: PublicKey, a: any): Launch {
-  return {
-    address: address.toBase58(),
-    creator: a.creator.toBase58(),
-    mint: a.mint.toBase58(),
-    launchId: a.launchId.toString(),
-    name: a.name,
-    symbol: a.symbol,
-    saleSupply: n(a.saleSupply),
-    creatorSupply: n(a.creatorSupply),
-    minPrice: n(a.minPrice),
-    maxPrice: n(a.maxPrice),
-    lpBps: a.lpBps,
-    feeBps: a.feeBps,
-    createdAt: n(a.createdAt),
-    roadshowEnd: n(a.roadshowEnd),
-    orderEnd: n(a.orderEnd),
-    lockSecs: n(a.lockSecs),
-    lockUntil: n(a.lockUntil),
-    buckets: a.bucketBudget.map(n),
-    totalBudget: n(a.totalBudget),
-    orderCount: a.orderCount,
-    finalized: a.finalized,
-    clearingTick: a.clearingTick,
-    clearingPrice: n(a.clearingPrice),
-    eligibleBudget: n(a.eligibleBudget),
-    soldValue: n(a.soldValue),
-    tokensSold: n(a.tokensSold),
-    creatorClaimed: a.creatorClaimed,
-    poolSol: n(a.poolSol),
-    poolTokens: n(a.poolTokens),
-    volumeSol: n(a.volumeSol),
-  };
+export async function fetchLaunches(): Promise<Launch[]> {
+  const r = await fetch(api("/api/launches"), { cache: "no-store" });
+  if (!r.ok) throw new Error("Couldn't load listings");
+  return r.json();
 }
 
-export async function fetchLaunches(connection: Connection): Promise<Launch[]> {
-  const program = getProgram(connection);
-  const all = await program.account.launch.all();
-  return all.map((x) => toLaunch(x.publicKey, x.account)).sort((a, b) => b.createdAt - a.createdAt);
+export async function fetchLaunch(address: string): Promise<Launch | null> {
+  const r = await fetch(api(`/api/launches/${address}`), { cache: "no-store" });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error("Couldn't load listing");
+  return r.json();
 }
 
-export async function fetchLaunch(connection: Connection, address: string): Promise<Launch | null> {
-  const program = getProgram(connection);
-  const key = new PublicKey(address);
-  const a = await program.account.launch.fetchNullable(key);
-  return a ? toLaunch(key, a) : null;
-}
+/** Memo that attributes a deposit to a listing and a max price. Must match the server. */
+export const orderMemo = (launch: string, tick: number) => `stewra:order:${launch}:${tick}`;
+export const cancelMessage = (launch: string, ts: number) => `Stewra: cancel my orders\nlaunch: ${launch}\nts: ${ts}`;
 
 // ───── phases ─────
 
-export type Phase = "roadshow" | "book" | "bell" | "trading" | "failed";
+export type Phase = "roadshow" | "book" | "bell" | "settling" | "trading" | "failed";
 
 export function phaseOf(l: Launch, now = Date.now() / 1000): Phase {
-  if (l.finalized) return l.soldValue > 0 ? "trading" : "failed";
+  if (l.status === "trading") return "trading";
+  if (l.status === "failed") return "failed";
+  if (l.status === "settling") return "settling";
   if (now < l.roadshowEnd) return "roadshow";
   if (now < l.orderEnd) return "book";
   return "bell";
@@ -151,12 +95,13 @@ export function phaseOf(l: Launch, now = Date.now() / 1000): Phase {
 export const PHASE_LABEL: Record<Phase, string> = {
   roadshow: "Roadshow",
   book: "Book open",
-  bell: "Bell ready",
+  bell: "Bell soon",
+  settling: "Settling",
   trading: "Trading",
   failed: "No demand",
 };
 
-// ───── auction math (mirrors the on-chain program) ─────
+// ───── auction math (mirrors the server) ─────
 
 export function tickPrice(l: Pick<Launch, "minPrice" | "maxPrice">, tick: number): number {
   return l.minPrice + Math.floor(((l.maxPrice - l.minPrice) * tick) / (NUM_TICKS - 1));
@@ -197,18 +142,8 @@ export function allocationFor(l: Launch, budget: number, maxTick: number): { spe
   return { spent, tokens: Math.floor((spent * ONE_TOKEN) / l.clearingPrice) };
 }
 
-export function quoteSwap(l: Launch, amountIn: number, buy: boolean, swapFeeBps: number): number {
-  const x = l.poolSol, y = l.poolTokens;
-  if (!x || !y || amountIn <= 0) return 0;
-  if (buy) {
-    const net = amountIn - Math.floor((amountIn * swapFeeBps) / BPS);
-    return Math.floor((y * net) / (x + net));
-  }
-  const gross = Math.floor((x * amountIn) / (y + amountIn));
-  return gross - Math.floor((gross * swapFeeBps) / BPS);
-}
-
-export const poolPrice = (l: Launch) => (l.poolTokens ? (l.poolSol / l.poolTokens) * ONE_TOKEN : 0);
+/** Current pool price in lamports per whole token. */
+export const poolPrice = (l: Launch) => l.poolPrice || (l.poolTokens ? (l.poolSol / l.poolTokens) * ONE_TOKEN : 0);
 
 // ───── formatting ─────
 
@@ -226,6 +161,10 @@ export function countdown(target: number, now = Date.now() / 1000): string {
   if (d) return `${d}d ${h}h ${m}m`;
   if (h) return `${h}h ${m}m ${s}s`;
   return `${m}m ${s}s`;
+}
+
+export function explorerAddress(addr: string) {
+  return explorerTx(addr).replace("/tx/", "/address/");
 }
 
 export function explorerTx(sig: string) {

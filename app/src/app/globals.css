@@ -268,7 +268,7 @@ h3 { font-size: 14px; margin: 0 0 10px; }
 .pill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .pill.roadshow { color: var(--blue); background: rgba(94, 158, 255, 0.1); }
 .pill.book { color: var(--accent); background: var(--accent-soft); }
-.pill.bell { color: var(--amber); background: var(--amber-soft); }
+.pill.bell, .pill.settling { color: var(--amber); background: var(--amber-soft); }
 .pill.trading { color: var(--violet); background: rgba(167, 139, 250, 0.1); }
 .pill.failed { color: var(--muted); background: var(--surface-2); }
 

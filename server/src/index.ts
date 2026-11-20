@@ -8,7 +8,15 @@ import { PublicKey } from "@solana/web3.js";
 import { listProfiles, getProfile, saveProfile, getTranscript, appendTranscript, getModeration, setHidden, isHidden, listReports, addReport, resolveReports, exportAll, snapshot, type AgentProfile } from "./store.js";
 import { verifyAdmin, adminsConfigured } from "./admin.js";
 import { answerRoadshow, draftProspectus, RoadshowUnavailable } from "./claude.js";
-import { getLaunchOnChain, profileMessage, RPC_URL } from "./chain.js";
+import { RPC_URL, NETWORK, COMPANY } from "./solana.js";
+import * as ipo from "./ipo.js";
+import { buildSwap } from "./meteora.js";
+
+const profileMessage = (launch: string, digest: string) => `Stewra: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;
+const getLaunchOnChain = async (id: string) => {
+  const l = ipo.getLaunch(id);
+  return l && l.status !== "pending" && l.status !== "expired" ? { creator: l.creator, name: l.name, symbol: l.symbol, finalized: Boolean(l.clearing) } : null;
+};
 import { profileDigest } from "./digest.js";
 import { allow } from "./ratelimit.js";
 import path from "path";
@@ -37,7 +45,7 @@ const wrap = (fn: (req: Request, res: Response) => Promise<unknown>) => (req: Re
   fn(req, res).catch(next);
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, rpc: RPC_URL, ai: Boolean(process.env.ANTHROPIC_API_KEY) });
+  res.json({ ok: true, network: NETWORK, company: COMPANY?.toBase58() ?? null, ai: Boolean(process.env.ANTHROPIC_API_KEY), now: Math.floor(Date.now() / 1000) });
 });
 
 // ───── agent profiles ─────
@@ -73,7 +81,7 @@ app.post("/api/agents", wrap(async (req, res) => {
   if (!fields.tagline || !fields.description) return res.status(400).json({ error: "Tagline and description are required" });
 
   const launch = await getLaunchOnChain(body.launch);
-  if (!launch) return res.status(404).json({ error: "Launch not found on-chain" });
+  if (!launch) return res.status(404).json({ error: "Listing not found" });
 
   // Only the on-chain creator may publish or edit the profile.
   const msg = new TextEncoder().encode(profileMessage(body.launch, profileDigest(fields)));
@@ -265,6 +273,117 @@ app.post("/api/prospectus", wrap(async (req, res) => {
   res.json({ prospectus: text });
 }));
 
+// ───── IPOs (company-wallet escrow) ─────
+
+let hiddenCache = new Set<string>();
+
+app.get("/api/platform", (_req, res) => res.json(ipo.platform()));
+
+app.get("/api/launches", wrap(async (_req, res) => {
+  res.json(await ipo.listLaunches());
+}));
+
+app.get("/api/launches/:id", wrap(async (req, res) => {
+  const l = ipo.getLaunch(req.params.id);
+  if (!l || l.status === "pending" || l.status === "expired") return res.status(404).json({ error: "Listing not found" });
+  res.json(await ipo.launchView(l));
+}));
+
+const int = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.floor(v) : NaN);
+const bigStr = (v: unknown) => (typeof v === "string" && /^\d{1,20}$/.test(v) ? v : "x");
+
+app.post("/api/launches/prepare", wrap(async (req, res) => {
+  if (!allow(`file:${req.ip}`, 10, 60 * 60_000)) return res.status(429).json({ error: "Too many filings. Try again later." });
+  const b = req.body ?? {};
+  if (typeof b.creator !== "string" || !isPubkey(b.creator)) return res.status(400).json({ error: "Connect your wallet first" });
+  const input: ipo.FilingInput = {
+    creator: b.creator, name: clip(b.name, 32), symbol: clip(b.symbol, 10).toUpperCase(),
+    saleSupply: bigStr(b.saleSupply), creatorSupply: bigStr(b.creatorSupply), minPrice: bigStr(b.minPrice), maxPrice: bigStr(b.maxPrice),
+    lpBps: int(b.lpBps), roadshowSecs: int(b.roadshowSecs), orderSecs: int(b.orderSecs), lockSecs: int(b.lockSecs),
+  };
+  const problem = ipo.validateFiling(input);
+  if (problem) return res.status(400).json({ error: problem });
+  const base = PUBLIC_API_URL || `${req.protocol}://${req.get("host")}`;
+  res.json(await ipo.prepareFiling(input, (mint) => `${base}/metadata/${mint}.json`));
+}));
+
+app.post("/api/launches/:id/confirm", wrap(async (req, res) => {
+  const l = await ipo.confirmFiling(req.params.id);
+  if (!l) return res.status(404).json({ error: "Unknown filing" });
+  res.json({ status: l.status });
+}));
+
+/** The buyer's browser reports its deposit right away; the background scan would find it anyway. */
+app.post("/api/orders", wrap(async (req, res) => {
+  const sig = String(req.body?.signature ?? "");
+  if (!/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(sig)) return res.status(400).json({ error: "Invalid signature" });
+  if (!allow(`ord:${req.ip}`, 60, 60_000)) return res.status(429).json({ error: "Too many requests" });
+  const outcome = await ipo.ingest(sig);
+  if (outcome === null) return res.status(202).json({ status: "confirming" });
+  res.json({ status: outcome });
+}));
+
+app.get("/api/launches/:id/position", wrap(async (req, res) => {
+  const buyer = String(req.query.buyer ?? "");
+  if (!isPubkey(buyer)) return res.status(400).json({ error: "Invalid wallet" });
+  res.json(ipo.position(req.params.id, buyer));
+}));
+
+app.post("/api/launches/:id/cancel", wrap(async (req, res) => {
+  if (!allow(`cx:${req.ip}`, 10, 60_000)) return res.status(429).json({ error: "Too many requests" });
+  const { buyer, ts, signature } = req.body ?? {};
+  if (typeof buyer !== "string" || !isPubkey(buyer) || typeof ts !== "number" || typeof signature !== "string") return res.status(400).json({ error: "Invalid request" });
+  const r = await ipo.cancel(req.params.id, buyer, ts, signature);
+  if ("error" in r && r.error) return res.status(400).json(r);
+  res.json(r);
+}));
+
+/** Unsigned swap transaction against the listing's locked Meteora pool; the trader signs it in their own wallet. */
+app.post("/api/swap", wrap(async (req, res) => {
+  if (!allow(`sw:${req.ip}`, 60, 60_000)) return res.status(429).json({ error: "Too many requests" });
+  const { mint, trader, buy, amountIn, slippageBps } = req.body ?? {};
+  const l = typeof mint === "string" ? ipo.getLaunch(mint) : null;
+  if (!l?.pool) return res.status(400).json({ error: "Trading isn't open for this listing yet" });
+  if (typeof trader !== "string" || !isPubkey(trader)) return res.status(400).json({ error: "Connect your wallet first" });
+  if (typeof amountIn !== "string" || !/^\d{1,20}$/.test(amountIn) || amountIn === "0") return res.status(400).json({ error: "Enter an amount" });
+  const slip = Math.min(1000, Math.max(10, Number(slippageBps) || 200));
+  try {
+    res.json(await buildSwap({ mint, trader, buy: Boolean(buy), amountIn: BigInt(amountIn), slippageBps: slip }));
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message.slice(0, 200) : "Couldn't build the trade" });
+  }
+}));
+
+// ───── admin: company wallet payouts, pause, solvency ─────
+
+app.post("/api/admin/payouts", admin("payouts", false), wrap(async (_req, res) => {
+  res.json({ ...ipo.payoutQueue(), solvency: await ipo.solvency(), platform: ipo.platform() });
+}));
+
+app.post("/api/admin/payouts/build", admin("sign-payouts", false), wrap(async (_req, res) => {
+  res.json({ items: await ipo.buildForAdmin(8) });
+}));
+
+/** No admin message needed: only the company wallet's own signature on the exact built message is accepted. */
+app.post("/api/admin/payouts/submit", wrap(async (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 20) : [];
+  res.json({ results: await ipo.submitFromAdmin(items.filter((i: { id?: unknown; tx?: unknown }) => typeof i?.id === "string" && typeof i?.tx === "string")) });
+}));
+
+app.post("/api/admin/pause", admin("pause", false), wrap(async (req, res) => {
+  await ipo.setPaused(true, clip(req.body?.note, 200));
+  res.json({ ok: true });
+}));
+
+app.post("/api/admin/unpause", admin("unpause", false), wrap(async (_req, res) => {
+  await ipo.setPaused(false);
+  res.json({ ok: true });
+}));
+
+app.post("/api/admin/ledger", admin("ledger", false), wrap(async (_req, res) => {
+  res.json({ ledger: await ipo.readLedger(1000), state: ipo.exportState() });
+}));
+
 // ───── errors ─────
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
@@ -280,5 +399,12 @@ const runSnapshot = () => snapshot().then((f) => console.log(`snapshot ${f}`)).c
 setTimeout(runSnapshot, 10_000);
 setInterval(runSnapshot, 6 * 60 * 60_000).unref();
 
+await ipo.loadState();
+ipo.setHiddenCheck((launch) => hiddenCache.has(launch));
+const refreshHidden = () => getModeration().then((m) => { hiddenCache = new Set(Object.keys(m.hidden)); }).catch(() => {});
+await refreshHidden();
+setInterval(refreshHidden, 15_000).unref();
+ipo.startWorker();
+
 const port = Number(process.env.PORT) || 4000;
-app.listen(port, () => console.log(`stewra-server listening on :${port} (rpc ${RPC_URL}, origins ${origins.join(", ")})`));
+app.listen(port, () => console.log(`stewra-server listening on :${port} (${NETWORK}, company ${COMPANY?.toBase58() ?? "NOT SET"}, origins ${origins.join(", ")})`));

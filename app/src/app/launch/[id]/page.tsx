@@ -2,14 +2,14 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { BN } from "@anchor-lang/core";
-import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import bs58 from "bs58";
 import { useBackend, useConfig, useLaunch, useNow, type PlatformConfig, type Profile } from "@/lib/hooks";
 import {
-  NUM_TICKS, ONE_TOKEN, PHASE_LABEL, api, imageUrl, allocationFor, countdown, demandCurve, getProgram, orderPda, phaseOf,
-  poolPrice, previewClearing, quoteSwap, short, sol, tickPrice, tokens, type Launch,
+  COMPANY_WALLET, NUM_TICKS, ONE_TOKEN, PHASE_LABEL, api, cancelMessage, countdown, demandCurve, explorerAddress, explorerTx, imageUrl,
+  orderMemo, phaseOf, poolPrice, previewClearing, short, sol, tickPrice, tokens, type Launch,
 } from "@/lib/stewra";
 import { TxNote, useTx } from "@/lib/tx";
 import { publishProfile } from "@/lib/publish";
@@ -18,39 +18,47 @@ import AgentAvatar from "@/components/AgentAvatar";
 import ImageUpload from "@/components/ImageUpload";
 import ReportButton from "@/components/ReportButton";
 
-type Order = { budget: number; maxTick: number; placedAt: number };
+type OrderRec = { sig: string; lamports: string; maxTick: number; at: number; status: "active" | "cancelled" | "rejected" | "settled"; reason?: string };
+type PayoutRec = { id: string; kind: string; lamports: string; tokens: string; status: string; sig?: string };
+type Position = { orders: OrderRec[]; tokens: string; refund: string; payouts: PayoutRec[] };
 type Entry = { id: string; question: string; answer: string; asker?: string; at: number };
+
+const MEMO_PROGRAM = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 
 export default function LaunchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { launch, reload } = useLaunch(id);
-  const { connection } = useConnection();
-  const wallet = useAnchorWallet();
+  const { publicKey } = useWallet();
   const config = useConfig();
   const now = useNow();
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
-  const [order, setOrder] = useState<Order | null>(null);
+  const [pos, setPos] = useState<Position | null>(null);
 
   const loadProfile = useCallback(() => {
     fetch(api(`/api/agents/${id}`)).then(async (r) => setProfile(r.ok ? await r.json() : null)).catch(() => setProfile(null));
   }, [id]);
   useEffect(loadProfile, [loadProfile]);
 
-  const loadOrder = useCallback(async () => {
-    if (!wallet || !launch) return setOrder(null);
-    const o = await getProgram(connection).account.order.fetchNullable(orderPda(new PublicKey(launch.address), wallet.publicKey));
-    setOrder(o ? { budget: Number(o.budget.toString()), maxTick: o.maxTick, placedAt: Number(o.placedAt.toString()) } : null);
-  }, [wallet, launch, connection]);
-  useEffect(() => { loadOrder(); }, [loadOrder]);
+  const loadPos = useCallback(async () => {
+    if (!publicKey) return setPos(null);
+    const r = await fetch(api(`/api/launches/${id}/position?buyer=${publicKey.toBase58()}`)).catch(() => null);
+    if (r?.ok) setPos(await r.json());
+  }, [publicKey, id]);
+  useEffect(() => {
+    loadPos();
+    const t = setInterval(loadPos, 5000);
+    return () => clearInterval(t);
+  }, [loadPos]);
 
-  const refresh = useCallback(async () => { await reload(); await loadOrder(); }, [reload, loadOrder]);
+  const refresh = useCallback(async () => { await reload(); await loadPos(); }, [reload, loadPos]);
 
   if (launch === undefined) return <div className="empty" style={{ marginTop: 40 }}>Loading listing…</div>;
   if (launch === null) return <div className="empty" style={{ marginTop: 40 }}>Listing not found. <Link href="/">Back to listings</Link></div>;
 
   const phase = phaseOf(launch, now);
-  const isCreator = wallet?.publicKey.toBase58() === launch.creator;
+  const isCreator = publicKey?.toBase58() === launch.creator;
   const clockTarget = phase === "roadshow" ? launch.roadshowEnd : phase === "book" ? launch.orderEnd : null;
+  const hasOrders = Boolean(pos?.orders.length);
 
   return (
     <>
@@ -69,6 +77,7 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
           <div className="tag">{profile?.hidden ? "Removed" : profile?.tagline ?? "No profile published yet"}</div>
           <div className="muted mono" style={{ fontSize: 12, marginTop: 4 }}>
             creator {short(launch.creator)}
+            {" · "}<a href={explorerAddress(launch.mint)} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>token</a>
             {profile?.website && !profile.hidden && <> · <a href={profile.website} target="_blank" rel="nofollow noopener noreferrer" style={{ textDecoration: "underline" }}>website</a></>}
             {" · "}<ReportButton launch={launch.address} />
           </div>
@@ -83,7 +92,7 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
 
       {profile?.hidden && (
         <div className="note err" style={{ marginBottom: 16 }}>
-          This listing was removed by moderators. If you placed an order, you can still cancel it or claim your refund below.
+          This listing was removed by moderators. New orders are refused and refunded. If you already ordered, you can cancel below, or your refund is paid automatically after the bell.
         </div>
       )}
       <div className="grid2">
@@ -111,16 +120,19 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
             </div>
           )}
           {(phase === "book" || phase === "bell") && <BookChart launch={launch} />}
-          {phase === "book" && <OrderPanel launch={launch} order={order} onChange={refresh} />}
-          {phase === "bell" && <BellPanel launch={launch} config={config} order={order} onChange={refresh} />}
-          {(phase === "trading" || phase === "failed") && (
+          {phase === "book" && <OrderPanel launch={launch} config={config} pos={pos} onChange={refresh} />}
+          {phase === "book" && hasOrders && <YourOrders launch={launch} pos={pos!} canCancel onChange={refresh} />}
+          {phase === "bell" && <BellPanel launch={launch} hasOrders={hasOrders} />}
+          {phase === "settling" && <SettlingPanel launch={launch} />}
+          {(phase === "settling" || phase === "trading" || phase === "failed") && (
             <>
               <Results launch={launch} />
-              {order && <ClaimPanel launch={launch} order={order} onChange={refresh} />}
-              {phase === "trading" && config && <TradePanel launch={launch} config={config} onChange={refresh} />}
+              {hasOrders && <AllocationPanel launch={launch} pos={pos!} />}
+              {phase === "trading" && <TradePanel launch={launch} />}
             </>
           )}
-          {isCreator && launch.finalized && <CreatorPanel launch={launch} now={now} onChange={refresh} />}
+          {phase === "bell" && hasOrders && <YourOrders launch={launch} pos={pos!} canCancel={false} onChange={refresh} />}
+          {isCreator && launch.finalized && launch.creatorSupply > 0 && <CreatorPanel launch={launch} now={now} />}
         </div>
       </div>
     </>
@@ -213,7 +225,7 @@ function ProfileForm({ launch, onSaved }: { launch: Launch; onSaved: () => void 
   return (
     <div className="panel stack">
       <h2 style={{ margin: 0 }}>Publish your agent&apos;s profile</h2>
-      {search.get("profile") === "missing" && <div className="note">Your IPO is filed on-chain. Publish the profile so people can see and question your agent.</div>}
+      {search.get("profile") === "missing" && <div className="note">Your IPO is filed. Publish the profile so people can see and question your agent.</div>}
       <div className="ff"><label>Logo</label><ImageUpload kind="logo" value={f.logo} onChange={(id) => setF((c) => ({ ...c, logo: id }))} /></div>
       <div className="ff"><label>Banner <span className="opt">Optional</span></label><ImageUpload kind="banner" value={f.banner} onChange={(id) => setF((c) => ({ ...c, banner: id }))} /></div>
       <div className="field"><label>Tagline</label><input value={f.tagline} onChange={set("tagline")} maxLength={120} /></div>
@@ -229,26 +241,6 @@ function ProfileForm({ launch, onSaved }: { launch: Launch; onSaved: () => void 
 }
 
 // ───────────────────────── sale terms & book ─────────────────────────
-
-function SaleTerms({ launch, config }: { launch: Launch; config: PlatformConfig | null }) {
-  const lockDays = launch.lockSecs / 86400;
-  return (
-    <div className="panel">
-      <h3>Sale terms</h3>
-      <div className="stats">
-        <div><small>For sale</small><b>{tokens(launch.saleSupply, 0)}</b></div>
-        <div><small>Price range (SOL)</small><b>{sol(launch.minPrice, 6)}–{sol(launch.maxPrice, 6)}</b></div>
-        <div><small>Creator lockup</small><b>{lockDays >= 1 ? `${lockDays.toFixed(0)}d` : `${Math.round(launch.lockSecs / 60)}m`}</b></div>
-        <div><small>To liquidity</small><b>{launch.lpBps / 100}%</b></div>
-      </div>
-      <p className="muted" style={{ fontSize: 12, margin: "10px 0 0" }}>
-        Creator keeps {((launch.creatorSupply / launch.saleSupply) * 100).toFixed(0)}% extra tokens, locked until{" "}
-        {launch.finalized ? new Date(launch.lockUntil * 1000).toLocaleString() : "the lockup ends after the bell"}. Platform fee {launch.feeBps / 100}%
-        {config ? `, trading fee ${config.swapFeeBps / 100}%` : ""}. Liquidity is locked forever.
-      </p>
-    </div>
-  );
-}
 
 function BookChart({ launch }: { launch: Launch }) {
   const curve = demandCurve(launch);
@@ -289,12 +281,39 @@ function BookChart({ launch }: { launch: Launch }) {
   );
 }
 
-function OrderPanel({ launch, order, onChange }: { launch: Launch; order: Order | null; onChange: () => Promise<void> }) {
-  const wallet = useAnchorWallet();
+
+// ───────────────────────── sale terms & orders ─────────────────────────
+
+function SaleTerms({ launch, config }: { launch: Launch; config: PlatformConfig | null }) {
+  const lockDays = launch.lockSecs / 86400;
+  return (
+    <div className="panel">
+      <h3>Sale terms</h3>
+      <div className="stats">
+        <div><small>For sale</small><b>{tokens(launch.saleSupply, 0)}</b></div>
+        <div><small>Price range (SOL)</small><b>{sol(launch.minPrice, 6)}–{sol(launch.maxPrice, 6)}</b></div>
+        <div><small>Creator lockup</small><b>{lockDays >= 1 ? `${lockDays.toFixed(0)}d` : `${Math.round(launch.lockSecs / 60)}m`}</b></div>
+        <div><small>To liquidity</small><b>{launch.lpBps / 100}%</b></div>
+      </div>
+      <p className="muted" style={{ fontSize: 12, margin: "10px 0 0" }}>
+        Creator keeps {((launch.creatorSupply / launch.saleSupply) * 100).toFixed(0)}% extra tokens, held by Stewra until{" "}
+        {launch.finalized ? new Date(launch.lockUntil * 1000).toLocaleString() : "the lockup ends after the bell"}. Platform fee {launch.feeBps / 100}%, trading fee {launch.swapFeeBps / 100}%.
+        Pool liquidity is permanently locked on Meteora at the bell.
+      </p>
+      <p className="muted" style={{ fontSize: 12, margin: "8px 0 0" }}>
+        <b>Custodial:</b> orders are paid to the Stewra company wallet{config?.company ? <> (<a href={explorerAddress(config.company)} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>{short(config.company)}</a>)</> : null}, which holds them until the bell and sends tokens and refunds. <Link href="/risk" style={{ textDecoration: "underline" }}>Risks</Link>
+      </p>
+    </div>
+  );
+}
+
+function OrderPanel({ launch, config, pos, onChange }: { launch: Launch; config: PlatformConfig | null; pos: Position | null; onChange: () => Promise<void> }) {
+  const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
   const tx = useTx();
   const [amount, setAmount] = useState("0.5");
   const [tick, setTick] = useState(NUM_TICKS - 1);
+  const [agree, setAgree] = useState(false);
 
   const est = useMemo(() => {
     const lamports = Math.round(Number(amount) * LAMPORTS_PER_SOL);
@@ -310,30 +329,37 @@ function OrderPanel({ launch, order, onChange }: { launch: Launch; order: Order 
     return { price: p.price, tokens: (spent * ONE_TOKEN) / p.price };
   }, [amount, tick, launch]);
 
-  const program = wallet ? getProgram(connection, wallet) : null;
+  const mismatch = config?.company && config.company !== COMPANY_WALLET;
 
-  if (order) {
-    return (
-      <div className="panel stack">
-        <h3 style={{ margin: 0 }}>Your order</h3>
-        <div className="stats" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div><small>Amount</small><b>{sol(order.budget)} SOL</b></div>
-          <div><small>Max price</small><b>{sol(tickPrice(launch, order.maxTick), 6)}</b></div>
-        </div>
-        <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-          Your SOL is held by the Stewra program until the bell. Anything not used is refunded. You can cancel any time before the book closes.
-        </p>
-        <button className="btn" disabled={tx.state.kind === "pending"} onClick={async () => {
-          if (await tx.run("Cancelling", () => program!.methods.cancelOrder().accounts({ launch: new PublicKey(launch.address), buyer: wallet!.publicKey } as never).rpc(), "Order cancelled, SOL refunded")) await onChange();
-        }}>Cancel order</button>
-        <TxNote state={tx.state} />
-      </div>
+  async function place() {
+    const lamports = Math.round(Number(amount) * LAMPORTS_PER_SOL);
+    if (!(lamports >= 0.01 * LAMPORTS_PER_SOL)) throw new Error("The minimum order is 0.01 SOL.");
+    if (!config?.company) throw new Error("Couldn't reach Stewra. Try again in a moment.");
+    if (mismatch) throw new Error("Safety check failed: the server's company wallet doesn't match this site. Don't send funds; contact Stewra.");
+    if (config.paused) throw new Error("Stewra is paused. Orders are on hold.");
+    const t = new Transaction().add(
+      SystemProgram.transfer({ fromPubkey: publicKey!, toPubkey: new PublicKey(COMPANY_WALLET), lamports }),
+      new TransactionInstruction({ programId: MEMO_PROGRAM, keys: [], data: Buffer.from(orderMemo(launch.address, tick), "utf8") }),
     );
+    const sig = await sendTransaction(t, connection);
+    await connection.confirmTransaction(sig, "confirmed").catch(() => undefined);
+    // Report it; the server credits it once it's finalized (usually under a minute) and also finds it on its own.
+    for (let i = 0; i < 30; i++) {
+      const r = await fetch(api("/api/orders"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ signature: sig }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 200) {
+        if (d.status === "order") return sig;
+        if (String(d.status).startsWith("rejected")) throw new Error(`Order refused (${String(d.status).slice(10)}). Your SOL will be refunded automatically.`);
+        return sig;
+      }
+      await new Promise((res) => setTimeout(res, 3000));
+    }
+    return sig; // still finalizing; it will show up under "Your orders"
   }
 
   return (
     <div className="panel stack">
-      <h3 style={{ margin: 0 }}>Place an order</h3>
+      <h3 style={{ margin: 0 }}>{pos?.orders.some((o) => o.status === "active") ? "Add another order" : "Place an order"}</h3>
       <div className="field">
         <label>Amount (SOL)</label>
         <input type="number" step="any" min="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -354,21 +380,70 @@ function OrderPanel({ launch, order, onChange }: { launch: Launch; order: Order 
             : <>At current demand the price would be {sol(est.price, 6)} SOL, above your max, so this order would be refunded.</>}
         </div>
       )}
-      <button className="btn primary" disabled={!wallet || tx.state.kind === "pending"} onClick={async () => {
-        const lamports = Math.round(Number(amount) * LAMPORTS_PER_SOL);
-        if (await tx.run("Placing order — approve in your wallet", () =>
-          program!.methods.placeOrder(new BN(lamports), tick).accounts({ launch: new PublicKey(launch.address), buyer: wallet!.publicKey } as never).rpc(),
-          "Order placed")) await onChange();
-      }}>{wallet ? "Place order" : "Connect wallet to order"}</button>
+      <label className="row" style={{ gap: 8, fontSize: 13, alignItems: "flex-start", flexWrap: "nowrap" }}>
+        <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ marginTop: 3 }} />
+        <span className="muted">I understand my SOL goes to the Stewra company wallet, which holds it until the bell and then sends my tokens and any refund. This is custodial, not a smart contract.</span>
+      </label>
+      {mismatch && <div className="note err">Safety check failed: the server reports a different company wallet than this site. Orders are disabled.</div>}
+      <button className="btn primary" disabled={!publicKey || !agree || Boolean(mismatch) || tx.state.kind === "pending"} onClick={async () => {
+        if (await tx.run("Placing order — approve in your wallet, then wait for confirmation", place, "Order placed")) await onChange();
+      }}>{publicKey ? "Place order" : "Connect wallet to order"}</button>
       <TxNote state={tx.state} />
     </div>
   );
 }
 
-function BellPanel({ launch, config, order, onChange }: { launch: Launch; config: PlatformConfig | null; order: Order | null; onChange: () => Promise<void> }) {
-  const wallet = useAnchorWallet();
-  const { connection } = useConnection();
+const ORDER_STATUS: Record<string, string> = { active: "Open", cancelled: "Cancelled", rejected: "Refused", settled: "Settled" };
+
+function YourOrders({ launch, pos, canCancel, onChange }: { launch: Launch; pos: Position; canCancel: boolean; onChange: () => Promise<void> }) {
+  const { publicKey, signMessage } = useWallet();
   const tx = useTx();
+  const open = pos.orders.filter((o) => o.status === "active");
+  const refunds = pos.payouts.filter((p) => p.kind === "refund");
+  async function cancel() {
+    if (!signMessage) throw new Error("Your wallet can't sign messages. Try Phantom, Backpack or Solflare.");
+    const ts = Date.now();
+    const sig = await signMessage(new TextEncoder().encode(cancelMessage(launch.address, ts)));
+    const r = await fetch(api(`/api/launches/${launch.address}/cancel`), {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ buyer: publicKey!.toBase58(), ts, signature: bs58.encode(sig) }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Couldn't cancel");
+  }
+  return (
+    <div className="panel stack">
+      <h3 style={{ margin: 0 }}>Your orders</h3>
+      <div className="stack" style={{ gap: 6 }}>
+        {pos.orders.map((o) => (
+          <div key={o.sig} className="row mono" style={{ fontSize: 13 }}>
+            <span>{sol(Number(o.lamports))} SOL</span>
+            <span className="muted">max {sol(tickPrice(launch, o.maxTick), 6)}</span>
+            <span className="spacer" />
+            <span className={o.status === "rejected" ? "muted" : ""}>{ORDER_STATUS[o.status]}{o.reason ? ` · ${o.reason}` : ""}</span>
+            <a href={explorerTx(o.sig)} target="_blank" rel="noreferrer" className="muted" style={{ textDecoration: "underline" }}>tx</a>
+          </div>
+        ))}
+      </div>
+      {refunds.map((p) => (
+        <div key={p.id} className="note">
+          Refund of {sol(Number(p.lamports))} SOL: {p.status === "done" ? <>sent{p.sig && <> · <a href={explorerTx(p.sig)} target="_blank" rel="noreferrer">view</a></>}</> : "queued, paid from the company wallet shortly"}
+        </div>
+      ))}
+      {canCancel && open.length > 0 && (
+        <>
+          <p className="muted" style={{ fontSize: 13, margin: 0 }}>You can cancel before the book closes. Your SOL is sent back from the company wallet.</p>
+          <button className="btn" disabled={tx.state.kind === "pending"} onClick={async () => {
+            if (await tx.run("Sign the cancellation in your wallet", cancel, "Cancelled. Your refund is queued.")) await onChange();
+          }}>Cancel {open.length > 1 ? `all ${open.length} orders` : "order"}</button>
+        </>
+      )}
+      <TxNote state={tx.state} />
+    </div>
+  );
+}
+
+function BellPanel({ launch, hasOrders }: { launch: Launch; hasOrders: boolean }) {
   const preview = previewClearing(launch);
   return (
     <div className="bell-banner stack">
@@ -376,19 +451,22 @@ function BellPanel({ launch, config, order, onChange }: { launch: Launch; config
       <h2 style={{ margin: 0 }}>The book is closed</h2>
       <p className="muted" style={{ margin: 0 }}>
         {launch.totalBudget > 0
-          ? <>Anyone can ring the bell. Everyone will pay <b className="mono">{sol(preview.price, 6)} SOL</b> per token and trading opens instantly.</>
-          : <>No orders came in. Ringing the bell closes the listing.</>}
+          ? <>The bell rings automatically within about a minute. Everyone will pay <b className="mono">{sol(preview.price, 6)} SOL</b> per token.</>
+          : <>No orders came in. The listing will close without a sale.</>}
       </p>
-      {order && <p style={{ margin: 0 }}>You have an order of {sol(order.budget)} SOL in this IPO.</p>}
-      <button className="btn bell" disabled={!wallet || !config || tx.state.kind === "pending"} onClick={async () => {
-        const program = getProgram(connection, wallet!);
-        if (await tx.run("Ringing the bell", () =>
-          program.methods.finalize().accounts({
-            launch: new PublicKey(launch.address), creator: new PublicKey(launch.creator),
-            treasury: new PublicKey(config!.treasury), caller: wallet!.publicKey,
-          } as never).rpc(), "Bell rung — trading is live")) await onChange();
-      }}>{wallet ? "Ring the bell" : "Connect wallet to ring the bell"}</button>
-      <TxNote state={tx.state} />
+      {hasOrders && <p style={{ margin: 0 }}>Your tokens and any refund are sent to your wallet automatically after the bell.</p>}
+    </div>
+  );
+}
+
+function SettlingPanel({ launch }: { launch: Launch }) {
+  const { total, done } = launch.settle;
+  return (
+    <div className="panel">
+      <h3>Bell rung · settling</h3>
+      <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+        Stewra is sending tokens and refunds from the company wallet, then opening the locked pool. {total > 0 && <b className="mono">{done}/{total} done</b>}
+      </p>
     </div>
   );
 }
@@ -397,10 +475,11 @@ function BellPanel({ launch, config, order, onChange }: { launch: Launch; config
 
 function Results({ launch }: { launch: Launch }) {
   if (launch.soldValue === 0) {
-    return <div className="panel"><h3>Closed without demand</h3><p className="muted" style={{ margin: 0 }}>No tokens were sold. Anyone with an order can reclaim their SOL below.</p></div>;
+    return <div className="panel"><h3>Closed without demand</h3><p className="muted" style={{ margin: 0 }}>No tokens were sold. Every order is refunded in full from the company wallet.</p></div>;
   }
   const over = launch.eligibleBudget / launch.soldValue;
-  const change = (poolPrice(launch) / launch.clearingPrice - 1) * 100;
+  const now = poolPrice(launch);
+  const change = now ? (now / launch.clearingPrice - 1) * 100 : 0;
   return (
     <div className="panel">
       <h3>IPO results</h3>
@@ -409,69 +488,82 @@ function Results({ launch }: { launch: Launch }) {
         <div><small>Raised</small><b>{sol(launch.soldValue, 2)} SOL</b></div>
         <div><small>Demand</small><b>{over.toFixed(2)}×</b></div>
         <div><small>Buyers</small><b>{launch.orderCount}</b></div>
-        <div><small>Price now</small><b>{sol(poolPrice(launch), 6)}</b></div>
-        <div><small>Since IPO</small><b style={{ color: change >= 0 ? "var(--green)" : "var(--red)" }}>{change >= 0 ? "+" : ""}{change.toFixed(1)}%</b></div>
-        <div><small>Liquidity</small><b>{sol(launch.poolSol, 2)} SOL</b></div>
-        <div><small>Volume</small><b>{sol(launch.volumeSol, 2)} SOL</b></div>
+        <div><small>Price now</small><b>{now ? sol(now, 6) : "—"}</b></div>
+        <div><small>Since IPO</small><b style={{ color: change >= 0 ? "var(--green)" : "var(--red)" }}>{now ? `${change >= 0 ? "+" : ""}${change.toFixed(1)}%` : "—"}</b></div>
+        <div><small>Liquidity</small><b>{launch.poolSol ? `${sol(launch.poolSol, 2)} SOL` : "—"}</b></div>
+        <div><small>Pool</small><b>{launch.pool ? <a href={explorerAddress(launch.pool)} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>Meteora</a> : "opening"}</b></div>
       </div>
     </div>
   );
 }
 
-function ClaimPanel({ launch, order, onChange }: { launch: Launch; order: Order; onChange: () => Promise<void> }) {
-  const wallet = useAnchorWallet();
-  const { connection } = useConnection();
-  const tx = useTx();
-  const a = allocationFor(launch, order.budget, order.maxTick);
-  const refund = order.budget - a.spent;
+function AllocationPanel({ launch, pos }: { launch: Launch; pos: Position }) {
+  const settle = pos.payouts.filter((p) => p.kind === "settle");
+  const tok = settle.reduce((s, p) => s + Number(p.tokens), 0);
+  const refund = settle.reduce((s, p) => s + Number(p.lamports), 0);
+  const sent = settle.length > 0 && settle.every((p) => p.status === "done");
   return (
     <div className="panel stack" style={{ borderColor: "var(--green-dim)" }}>
       <h3 style={{ margin: 0 }}>Your allocation</h3>
       <div className="stats" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <div><small>Tokens</small><b>{tokens(a.tokens)} ${launch.symbol}</b></div>
+        <div><small>Tokens</small><b>{tokens(tok)} ${launch.symbol}</b></div>
         <div><small>Refund</small><b>{sol(refund)} SOL</b></div>
       </div>
-      {a.tokens === 0 && launch.soldValue > 0 && <p className="muted" style={{ margin: 0, fontSize: 13 }}>The IPO price was above your max price, so you get a full refund.</p>}
-      <button className="btn primary" disabled={tx.state.kind === "pending"} onClick={async () => {
-        const program = getProgram(connection, wallet!);
-        if (await tx.run("Claiming", () => program.methods.claim().accounts({ launch: new PublicKey(launch.address), buyer: wallet!.publicKey } as never).rpc(), "Claimed")) await onChange();
-      }}>Claim {a.tokens > 0 ? "tokens" : ""}{a.tokens > 0 && refund > 0 ? " + " : ""}{refund > 0 ? "refund" : ""}</button>
-      <TxNote state={tx.state} />
+      {tok === 0 && launch.soldValue > 0 && settle.length > 0 && <p className="muted" style={{ margin: 0, fontSize: 13 }}>The IPO price was above your max price, so you get a full refund.</p>}
+      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+        {settle.length === 0 ? "Nothing to settle for this wallet." : sent ? <>Sent to your wallet{settle[0].sig && <> · <a href={explorerTx(settle[0].sig)} target="_blank" rel="noreferrer">view transaction</a></>}.</> : "Being sent to your wallet automatically. No action needed."}
+      </p>
     </div>
   );
 }
 
-function TradePanel({ launch, config, onChange }: { launch: Launch; config: PlatformConfig; onChange: () => Promise<void> }) {
-  const wallet = useAnchorWallet();
+function TradePanel({ launch }: { launch: Launch }) {
+  const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
   const tx = useTx();
   const [buy, setBuy] = useState(true);
   const [amount, setAmount] = useState("");
   const [bal, setBal] = useState({ sol: 0, tok: 0 });
+  const [quote, setQuote] = useState<{ out: string; fee: string; priceImpact: number; tx: string; key: string } | null>(null);
+  const [qErr, setQErr] = useState("");
 
   const loadBal = useCallback(async () => {
-    if (!wallet) return;
-    const ata = getAssociatedTokenAddressSync(new PublicKey(launch.mint), wallet.publicKey);
+    if (!publicKey) return;
+    const ata = getAssociatedTokenAddressSync(new PublicKey(launch.mint), publicKey);
     const [s, t] = await Promise.all([
-      connection.getBalance(wallet.publicKey),
+      connection.getBalance(publicKey),
       connection.getTokenAccountBalance(ata).then((r) => Number(r.value.amount)).catch(() => 0),
     ]);
     setBal({ sol: s, tok: t });
-  }, [wallet, connection, launch.mint]);
+  }, [publicKey, connection, launch.mint]);
   useEffect(() => {
     loadBal();
-    const t = setInterval(loadBal, 4000); // picks up claims made in other panels
+    const t = setInterval(loadBal, 6000);
     return () => clearInterval(t);
-  }, [loadBal, launch.poolSol]);
+  }, [loadBal]);
 
   const amountIn = Math.floor(Number(amount) * (buy ? LAMPORTS_PER_SOL : ONE_TOKEN));
-  const out = quoteSwap(launch, amountIn, buy, config.swapFeeBps);
-  const minOut = Math.floor(out * 0.98);
+  const key = `${buy}:${amountIn}:${publicKey?.toBase58()}`;
+
+  // Quote from the server (it builds the pool transaction your wallet will sign).
+  useEffect(() => {
+    setQuote(null); setQErr("");
+    if (!publicKey || !(amountIn > 0)) return;
+    const t = setTimeout(async () => {
+      const r = await fetch(api("/api/swap"), {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mint: launch.mint, trader: publicKey.toBase58(), buy, amountIn: String(amountIn), slippageBps: 200 }),
+      }).catch(() => null);
+      const d = await r?.json().catch(() => ({}));
+      if (r?.ok) setQuote({ ...d, key }); else setQErr(d?.error || "Couldn't get a quote");
+    }, 400);
+    return () => clearTimeout(t);
+  }, [key, amountIn, buy, publicKey, launch.mint]);
 
   return (
     <div className="panel stack">
       <div className="row"><h3 style={{ margin: 0 }}>Trade ${launch.symbol}</h3><span className="spacer" />
-        {wallet && <span className="muted mono" style={{ fontSize: 12 }}>{sol(bal.sol, 3)} SOL · {tokens(bal.tok)} {launch.symbol}</span>}
+        {publicKey && <span className="muted mono" style={{ fontSize: 12 }}>{sol(bal.sol, 3)} SOL · {tokens(bal.tok)} {launch.symbol}</span>}
       </div>
       <div className="tabs">
         <button className={buy ? "on buy" : ""} onClick={() => setBuy(true)}>Buy</button>
@@ -484,45 +576,39 @@ function TradePanel({ launch, config, onChange }: { launch: Launch; config: Plat
           {!buy && <button className="btn sm" onClick={() => setAmount(String(bal.tok / ONE_TOKEN))}>Max</button>}
         </div>
       </div>
-      {amountIn > 0 && (
+      {quote && quote.key === key && (
         <div className="note">
-          You get about <b className="mono">{buy ? `${tokens(out)} ${launch.symbol}` : `${sol(out)} SOL`}</b>
-          <span className="muted"> · {config.swapFeeBps / 100}% fee · max 2% slippage</span>
+          You get about <b className="mono">{buy ? `${tokens(Number(quote.out))} ${launch.symbol}` : `${sol(Number(quote.out))} SOL`}</b>
+          <span className="muted"> · {launch.swapFeeBps / 100}% pool fee · max 2% slippage{quote.priceImpact > 1 ? ` · ${quote.priceImpact.toFixed(1)}% price impact` : ""}</span>
         </div>
       )}
-      <button className={`btn ${buy ? "primary" : ""}`} disabled={!wallet || !(amountIn > 0) || !(out > 0) || tx.state.kind === "pending"} onClick={async () => {
-        const program = getProgram(connection, wallet!);
-        if (await tx.run(buy ? "Buying" : "Selling", () =>
-          program.methods.swap(new BN(amountIn), new BN(minOut), buy).accounts({
-            launch: new PublicKey(launch.address), treasury: new PublicKey(config.treasury), trader: wallet!.publicKey,
-          } as never).rpc(), buy ? "Bought" : "Sold")) { setAmount(""); await onChange(); await loadBal(); }
-      }}>{wallet ? (buy ? "Buy" : "Sell") : "Connect wallet to trade"}</button>
+      {qErr && amountIn > 0 && <div className="note err">{qErr}</div>}
+      <button className={`btn ${buy ? "primary" : ""}`} disabled={!publicKey || !quote || quote.key !== key || tx.state.kind === "pending"} onClick={async () => {
+        if (await tx.run(buy ? "Buying — approve in your wallet" : "Selling — approve in your wallet", async () => {
+          const t = Transaction.from(Buffer.from(quote!.tx, "base64"));
+          const sig = await sendTransaction(t, connection);
+          await connection.confirmTransaction(sig, "confirmed");
+          return sig;
+        }, buy ? "Bought" : "Sold")) { setAmount(""); await loadBal(); }
+      }}>{publicKey ? (buy ? "Buy" : "Sell") : "Connect wallet to trade"}</button>
+      <p className="muted" style={{ fontSize: 12, margin: 0 }}>Trades go straight from your wallet to the listing&apos;s Meteora pool. Stewra never holds your funds when you trade.</p>
       <TxNote state={tx.state} />
     </div>
   );
 }
 
-function CreatorPanel({ launch, now, onChange }: { launch: Launch; now: number; onChange: () => Promise<void> }) {
-  const wallet = useAnchorWallet();
-  const { connection } = useConnection();
-  const tx = useTx();
+function CreatorPanel({ launch, now }: { launch: Launch; now: number }) {
   const amount = launch.saleSupply ? Math.floor((launch.creatorSupply * launch.tokensSold) / launch.saleSupply) : 0;
   const locked = now < launch.lockUntil;
   return (
     <div className="panel stack">
       <h3 style={{ margin: 0 }}>Creator allocation</h3>
       <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-        {launch.creatorClaimed ? `Claimed ${tokens(amount)} ${launch.symbol}.`
-          : locked ? <>Your {tokens(amount)} {launch.symbol} unlock in <b className="mono">{countdown(launch.lockUntil, now)}</b>.</>
-          : `${tokens(amount)} ${launch.symbol} are unlocked.`}
+        {launch.creatorClaimed ? `Sent ${tokens(amount)} ${launch.symbol} to your wallet.`
+          : amount === 0 ? "No creator tokens: the sale didn't complete."
+          : locked ? <>Your {tokens(amount)} {launch.symbol} are held by Stewra and sent to you automatically in <b className="mono">{countdown(launch.lockUntil, now)}</b>.</>
+          : `Your ${tokens(amount)} ${launch.symbol} are unlocked and being sent to your wallet.`}
       </p>
-      {!launch.creatorClaimed && amount > 0 && (
-        <button className="btn" disabled={locked || tx.state.kind === "pending"} onClick={async () => {
-          const program = getProgram(connection, wallet!);
-          if (await tx.run("Claiming", () => program.methods.claimCreator().accounts({ launch: new PublicKey(launch.address), creator: wallet!.publicKey } as never).rpc(), "Creator tokens claimed")) await onChange();
-        }}>{locked ? "Locked" : "Claim creator tokens"}</button>
-      )}
-      <TxNote state={tx.state} />
     </div>
   );
 }

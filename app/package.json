@@ -8,7 +8,6 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
-    "@anchor-lang/core": "^0.32.2",
     "@noble/curves": "^1.8.1",
     "@noble/hashes": "^1.8.0",
     "@solana/spl-token": "^0.4.13",

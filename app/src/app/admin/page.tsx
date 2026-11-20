@@ -4,6 +4,7 @@ import Link from "next/link";
 import bs58 from "bs58";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { api, short } from "@/lib/stewra";
+import PayoutsAdmin from "@/components/PayoutsAdmin";
 
 type Report = { id: string; launch: string; reason: string; details: string; reporter?: string; at: number; resolved?: boolean };
 type Data = { reports: Report[]; hidden: Record<string, { at: number; note: string }>; names: Record<string, string> };
@@ -59,8 +60,8 @@ export default function AdminPage() {
   return (
     <div className="cf admin">
       <header className="cf-head">
-        <h1>Moderation</h1>
-        <p>Review reports and hide listings. Every action asks your wallet to sign, so only admin wallets can act.</p>
+        <h1>Admin</h1>
+        <p>Company-wallet payouts, emergency pause and moderation. Every action asks your wallet to sign, so only admin wallets can act.</p>
       </header>
 
       {!data ? (
@@ -78,6 +79,8 @@ export default function AdminPage() {
             <button className="btn sm" onClick={() => call("/api/admin/export", "export")} disabled={!!busy}>Download backup</button>
           </div>
           {err && <div className="note err">{err}</div>}
+
+          <PayoutsAdmin signed={signed} />
 
           <section>
             <h2>Open reports <span className="muted">{open.length}</span></h2>
