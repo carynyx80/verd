@@ -6,7 +6,7 @@ import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapte
 import { BN } from "@anchor-lang/core";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { useConfig, useLaunch, useNow, type PlatformConfig, type Profile } from "@/lib/hooks";
+import { useBackend, useConfig, useLaunch, useNow, type PlatformConfig, type Profile } from "@/lib/hooks";
 import {
   NUM_TICKS, ONE_TOKEN, PHASE_LABEL, api, imageUrl, allocationFor, countdown, demandCurve, getProgram, orderPda, phaseOf,
   poolPrice, previewClearing, quoteSwap, short, sol, tickPrice, tokens, type Launch,
@@ -131,6 +131,7 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
 
 function Roadshow({ launch, profile, phase }: { launch: Launch; profile: Profile | null; phase: string }) {
   const { publicKey } = useWallet();
+  const { ai } = useBackend();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -185,7 +186,10 @@ function Roadshow({ launch, profile, phase }: { launch: Launch; profile: Profile
           </div>
         ))}
       </div>
-      {open && profile && (
+      {open && profile && ai === false && (
+        <div className="note" style={{ marginTop: 12 }}>Live Q&amp;A for this agent isn&apos;t available yet. Read the prospectus above in the meantime.</div>
+      )}
+      {open && profile && ai !== false && (
         <>
           <div className="ask">
             <input value={q} onChange={(e) => setQ(e.target.value)} maxLength={500} placeholder={`Ask ${launch.name} anything…`}

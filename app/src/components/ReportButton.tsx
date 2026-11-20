@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { api } from "@/lib/stewra";
 
@@ -18,6 +18,16 @@ export default function ReportButton({ launch }: { launch: string }) {
   const [details, setDetails] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "done" | "err">("idle");
   const [err, setErr] = useState("");
+  const root = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (root.current && !root.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
 
   async function send() {
     if (!reason) { setErr("Choose a reason"); return; }
@@ -38,7 +48,7 @@ export default function ReportButton({ launch }: { launch: string }) {
   }
 
   return (
-    <span className="report">
+    <span className="report" ref={root}>
       <button type="button" className="link-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>Report</button>
       {open && (
         <div className="report-pop" role="dialog" aria-label="Report this listing">

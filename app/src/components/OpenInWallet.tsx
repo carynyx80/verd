@@ -22,5 +22,5 @@ export default function OpenInWallet() {
   }, [wallets, connected]);
 
   if (!href) return null;
-  return <a className="btn sm" href={href}>Open in Phantom</a>;
+  return <a className="btn sm open-wallet" href={href}>Open in Phantom</a>;
 }

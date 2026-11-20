@@ -582,3 +582,5 @@ h3 { font-size: 14px; margin: 0 0 10px; }
 .legal-body p, .legal-body li { color: var(--text-2); font-size: 14.5px; line-height: 1.7; }
 .legal-body ul { padding-left: 18px; }
 .legal-body a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-3); text-underline-offset: 3px; }
+
+.nav-right .open-wallet ~ .wallet-adapter-dropdown, .nav-right .open-wallet ~ .wallet-adapter-button { display: none; }

@@ -12,7 +12,11 @@ export function friendlyError(e: unknown): string {
   if (code) return code;
   const msg = e instanceof Error ? e.message : String(e);
   if (/User rejected/i.test(msg)) return "You cancelled the transaction in your wallet.";
-  if (/insufficient (funds|lamports)/i.test(msg) || /0x1\b/.test(msg)) return "Not enough SOL in your wallet for this.";
+  if (/insufficient (funds|lamports)/i.test(msg) || /0x1\b/.test(msg) || /no record of a prior credit/i.test(msg) || /AccountNotFound/i.test(msg))
+    return "Your wallet doesn't have enough SOL for this.";
+  if (/blockhash not found|block height exceeded|expired/i.test(msg)) return "The transaction took too long to confirm. Try again.";
+  if (/simulation failed|reverted/i.test(msg)) return "The transaction couldn't be completed. Check your wallet has SOL and try again.";
+  if (/WalletNotConnected|not connected/i.test(msg)) return "Connect your wallet first.";
   const m = msg.match(/Error Message: ([^.]+)/);
   return m ? m[1] : msg.slice(0, 200);
 }

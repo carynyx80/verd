@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { BN } from "@anchor-lang/core";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { useConfig } from "@/lib/hooks";
+import { useBackend, useConfig } from "@/lib/hooks";
 import { CLUSTER, ONE_TOKEN, api, getProgram, imageUrl, launchPda } from "@/lib/stewra";
 import { publishProfile } from "@/lib/publish";
 import { TxNote, useTx } from "@/lib/tx";
@@ -22,6 +22,7 @@ export default function CreatePage() {
   const wallet = useAnchorWallet();
   const { signMessage } = useWallet();
   const config = useConfig();
+  const { ai } = useBackend();
   const tx = useTx();
   const dev = CLUSTER === "localnet"; // short phases only for local testing
 
@@ -305,7 +306,7 @@ export default function CreatePage() {
                     <button role="tab" aria-selected={tab === "preview"} className={tab === "preview" ? "on" : ""} onClick={() => setTab("preview")}><span className="seg-label">Preview</span></button>
                   </div>
                   <span className="spacer" />
-                  <button className="btn sm ghost" type="button" onClick={draft} disabled={drafting}>{drafting ? "Generating…" : "Generate draft"}</button>
+                  {ai && <button className="btn sm ghost" type="button" onClick={draft} disabled={drafting}>{drafting ? "Generating…" : "Generate draft"}</button>}
                 </div>
                 {tab === "write" ? (
                   <textarea aria-label="Prospectus" className="editor-area" value={f.prospectus} onChange={set("prospectus")} maxLength={6000} rows={12}

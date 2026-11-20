@@ -3,13 +3,51 @@ import { useCallback, useEffect, useState } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { api, fetchLaunch, fetchLaunches, getProgram, configPda, type Launch } from "./stewra";
 
+// Offset between the cluster's clock (what the program checks) and this device's clock.
+// Shared across components and refreshed at most once a minute.
+let clockOffset = 0;
+let clockFetchedAt = 0;
+let clockInflight: Promise<void> | null = null;
+
+function syncClock(connection: ReturnType<typeof useConnection>["connection"]) {
+  if (clockInflight || Date.now() - clockFetchedAt < 60_000) return clockInflight;
+  clockInflight = (async () => {
+    try {
+      const slot = await connection.getSlot("confirmed");
+      const chain = await connection.getBlockTime(slot);
+      if (chain) clockOffset = chain - Date.now() / 1000;
+      clockFetchedAt = Date.now();
+    } catch {
+      // keep the previous offset; device clock is a fine fallback
+    } finally {
+      clockInflight = null;
+    }
+  })();
+  return clockInflight;
+}
+
+/** Current time in unix seconds, aligned to the Solana cluster clock. */
 export function useNow(intervalMs = 1000) {
-  const [now, setNow] = useState(() => Date.now() / 1000);
+  const { connection } = useConnection();
+  const [now, setNow] = useState(() => Date.now() / 1000 + clockOffset);
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now() / 1000), intervalMs);
+    syncClock(connection);
+    const t = setInterval(() => {
+      syncClock(connection);
+      setNow(Date.now() / 1000 + clockOffset);
+    }, intervalMs);
     return () => clearInterval(t);
-  }, [intervalMs]);
+  }, [intervalMs, connection]);
   return now;
+}
+
+/** Whether the backend has an AI model configured (roadshow answers, prospectus drafts). */
+export function useBackend() {
+  const [ai, setAi] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch(api("/health")).then((r) => r.json()).then((d) => setAi(Boolean(d.ai))).catch(() => setAi(false));
+  }, []);
+  return { ai };
 }
 
 export function useLaunches(pollMs = 6000) {

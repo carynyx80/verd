@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="wrap page">{children}</main>
           <Footer />
         </Providers>
-        <Analytics />
+        {process.env.NEXT_PUBLIC_ANALYTICS === "1" && <Analytics />}
       </body>
     </html>
   );
