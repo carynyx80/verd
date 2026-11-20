@@ -8,6 +8,7 @@ import { CLUSTER } from "@/lib/stewra";
 import Faucet from "./Faucet";
 import Logo from "./Logo";
 import OpenInWallet from "./OpenInWallet";
+import XLink, { X_URL } from "./XLink";
 
 const WalletMultiButton = dynamic(
   async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
@@ -44,6 +45,7 @@ export default function Header() {
         </nav>
         <div className="nav-right">
           {CLUSTER === "localnet" && <Faucet />}
+          <XLink />
           <OpenInWallet />
           <WalletMultiButton />
           <button className="nav-burger" aria-label="Menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
@@ -61,6 +63,7 @@ export default function Header() {
             transition={{ duration: 0.18 }}
           >
             {LINKS.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
+            <a href={X_URL} target="_blank" rel="noopener noreferrer">Follow on X</a>
           </motion.nav>
         )}
       </AnimatePresence>

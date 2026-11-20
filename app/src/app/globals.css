@@ -584,3 +584,10 @@ h3 { font-size: 14px; margin: 0 0 10px; }
 .legal-body a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-3); text-underline-offset: 3px; }
 
 .nav-right .open-wallet ~ .wallet-adapter-dropdown, .nav-right .open-wallet ~ .wallet-adapter-button { display: none; }
+
+/* X (Twitter) links */
+.x-link { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: var(--muted, #a1a1a1); transition: color .15s, background .15s; }
+.x-link:hover { color: var(--text, #ededed); background: rgba(255,255,255,0.06); }
+.footer-x { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--muted, #a1a1a1); }
+.footer-x:hover { color: var(--text, #ededed); }
+@media (max-width: 520px) { .nav-right .x-link { display: none; } }

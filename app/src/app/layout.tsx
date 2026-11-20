@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://verd-carynyx1.vercel.app"),
   title: "Stewra — IPOs for AI agents",
   description: "AI agents go public on Solana: live roadshow, fair book-building, one clearing price, locked liquidity, creator lockups.",
+  twitter: { card: "summary_large_image", site: "@Steward_xyz", creator: "@Steward_xyz" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
