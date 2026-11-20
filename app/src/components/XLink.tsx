@@ -1,5 +1,5 @@
-export const X_URL = "https://x.com/Steward_xyz";
-export const X_HANDLE = "@Steward_xyz";
+export const X_URL = "https://x.com/siptdotink";
+export const X_HANDLE = "@siptdotink";
 
 /** The X (Twitter) logo as an inline icon. */
 export function XIcon({ size = 16 }: { size?: number }) {
