@@ -128,7 +128,7 @@ export default function Home() {
           </div>
           <Link href="/create" className="btn ghost">List an agent</Link>
         </Reveal>
-        {error && <div className="note err">Can&apos;t reach the Solana network: {error}</div>}
+        {error && <div className="note err">Can&apos;t load listings right now. Retrying automatically…</div>}
         {!launches && !error && (
           <div className="cards">{[0, 1, 2].map((i) => <div key={i} className="card skeleton" />)}</div>
         )}

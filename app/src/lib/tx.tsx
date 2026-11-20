@@ -1,6 +1,19 @@
 "use client";
 import { useState } from "react";
+import type { Connection } from "@solana/web3.js";
 import { explorerTx } from "./stewra";
+
+/** Waits for a signature by polling (works through the HTTP-only RPC relay). Throws if it failed on-chain. */
+export async function confirmSig(connection: Connection, sig: string, timeoutMs = 90_000) {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const st = (await connection.getSignatureStatuses([sig]).catch(() => null))?.value[0];
+    if (st?.err) throw new Error("The transaction failed on-chain. Nothing was charged except the network fee.");
+    if (st && (st.confirmationStatus === "confirmed" || st.confirmationStatus === "finalized")) return;
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error("The transaction took too long to confirm. Check your wallet history before retrying.");
+}
 
 export type TxState = { kind: "idle" } | { kind: "pending"; label: string } | { kind: "ok"; label: string; sig?: string } | { kind: "err"; message: string };
 

@@ -33,7 +33,8 @@ app.use(
   cors({
     origin(origin, cb) {
       if (!origin) return cb(null, true); // curl, health checks
-      const ok = origins.some((o) => (o.startsWith("*.") ? origin.endsWith(o.slice(1)) : origin === o));
+      // "*-team.vercel.app" style entries match by suffix, so every deployment URL of the project works.
+      const ok = origins.some((o) => (o.startsWith("*") ? /^https:\/\/[a-z0-9.-]+$/.test(origin) && origin.endsWith(o.slice(1)) : origin === o));
       cb(null, ok);
     },
   })
@@ -278,6 +279,27 @@ app.post("/api/prospectus", wrap(async (req, res) => {
 let hiddenCache = new Set<string>();
 
 app.get("/api/platform", (_req, res) => res.json(ipo.platform()));
+
+// ───── Solana RPC relay ─────
+// Public mainnet RPC rejects browser requests, and a paid RPC key shouldn't ship to browsers.
+// The site talks to Solana through here: only the read/send methods it needs, rate-limited per IP.
+const RPC_METHODS = new Set([
+  "getLatestBlockhash", "isBlockhashValid", "getBlockHeight", "getSlot", "getEpochInfo", "getBalance", "getAccountInfo",
+  "getMultipleAccounts", "getTokenAccountBalance", "getTokenAccountsByOwner", "getSignatureStatuses", "getMinimumBalanceForRentExemption",
+  "getFeeForMessage", "getRecentPrioritizationFees", "simulateTransaction", "sendTransaction", "getBlockTime", "getVersion", "getGenesisHash",
+]);
+app.post("/rpc", express.json({ limit: "256kb" }), wrap(async (req, res) => {
+  const calls = Array.isArray(req.body) ? req.body : [req.body];
+  if (!calls.length || calls.length > 20) return res.status(400).json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid request" } });
+  if (!allow(`rpc:${req.ip}`, 240, 60_000)) return res.status(429).json({ jsonrpc: "2.0", id: null, error: { code: 429, message: "Too many requests" } });
+  for (const c of calls) {
+    if (!c || typeof c.method !== "string" || !RPC_METHODS.has(c.method)) {
+      return res.status(403).json({ jsonrpc: "2.0", id: c?.id ?? null, error: { code: -32601, message: `Method not allowed: ${String(c?.method).slice(0, 40)}` } });
+    }
+  }
+  const upstream = await fetch(RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(req.body) });
+  res.status(upstream.status).type("application/json").send(await upstream.text());
+}));
 
 app.get("/api/launches", wrap(async (_req, res) => {
   res.json(await ipo.listLaunches());

@@ -11,7 +11,7 @@ import {
   COMPANY_WALLET, NUM_TICKS, ONE_TOKEN, PHASE_LABEL, api, cancelMessage, countdown, demandCurve, explorerAddress, explorerTx, imageUrl,
   orderMemo, phaseOf, poolPrice, previewClearing, short, sol, tickPrice, tokens, type Launch,
 } from "@/lib/stewra";
-import { TxNote, useTx } from "@/lib/tx";
+import { TxNote, confirmSig, useTx } from "@/lib/tx";
 import { publishProfile } from "@/lib/publish";
 import Prospectus from "@/components/Prospectus";
 import AgentAvatar from "@/components/AgentAvatar";
@@ -342,7 +342,7 @@ function OrderPanel({ launch, config, pos, onChange }: { launch: Launch; config:
       new TransactionInstruction({ programId: MEMO_PROGRAM, keys: [], data: Buffer.from(orderMemo(launch.address, tick), "utf8") }),
     );
     const sig = await sendTransaction(t, connection);
-    await connection.confirmTransaction(sig, "confirmed").catch(() => undefined);
+    await confirmSig(connection, sig);
     // Report it; the server credits it once it's finalized (usually under a minute) and also finds it on its own.
     for (let i = 0; i < 30; i++) {
       const r = await fetch(api("/api/orders"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ signature: sig }) });
@@ -587,7 +587,7 @@ function TradePanel({ launch }: { launch: Launch }) {
         if (await tx.run(buy ? "Buying — approve in your wallet" : "Selling — approve in your wallet", async () => {
           const t = Transaction.from(Buffer.from(quote!.tx, "base64"));
           const sig = await sendTransaction(t, connection);
-          await connection.confirmTransaction(sig, "confirmed");
+          await confirmSig(connection, sig);
           return sig;
         }, buy ? "Bought" : "Sold")) { setAmount(""); await loadBal(); }
       }}>{publicKey ? (buy ? "Buy" : "Sell") : "Connect wallet to trade"}</button>

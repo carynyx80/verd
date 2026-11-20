@@ -7,7 +7,7 @@ import { LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
 import { useBackend, useConfig } from "@/lib/hooks";
 import { CLUSTER, ONE_TOKEN, api, imageUrl, sol } from "@/lib/stewra";
 import { publishProfile } from "@/lib/publish";
-import { TxNote, useTx } from "@/lib/tx";
+import { TxNote, confirmSig, useTx } from "@/lib/tx";
 import Prospectus from "@/components/Prospectus";
 import ImageUpload from "@/components/ImageUpload";
 import AgentAvatar from "@/components/AgentAvatar";
@@ -125,7 +125,7 @@ export default function CreatePage() {
       // The creator signs locally and we broadcast the exact bytes, so the server's partial signature stays valid.
       const signed = await signTransaction!(Transaction.from(Buffer.from(prep.tx, "base64")));
       const sig = await connection.sendRawTransaction(signed.serialize());
-      await connection.confirmTransaction({ signature: sig, blockhash: signed.recentBlockhash!, lastValidBlockHeight: prep.lastValidBlockHeight }, "confirmed");
+      await confirmSig(connection, sig);
       // Wait for finality so the listing is activated server-side before the profile is published.
       for (let i = 0; i < 40; i++) {
         const c = await fetch(api(`/api/launches/${launch}/confirm`), { method: "POST" }).then((r) => r.json()).catch(() => ({}));

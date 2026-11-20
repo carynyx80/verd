@@ -7,9 +7,15 @@ const DEFAULT_RPC: Record<string, string> = {
   devnet: "https://api.devnet.solana.com",
   localnet: "http://127.0.0.1:8899",
 };
-export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC[CLUSTER] || DEFAULT_RPC["mainnet-beta"];
 /** Base URL of the Stewra backend (Railway). */
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/$/, "");
+/**
+ * RPC the browser uses. On mainnet this defaults to the backend relay: Solana's public mainnet RPC
+ * refuses browser requests, and a paid RPC key must not ship to browsers.
+ */
+export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || (CLUSTER === "mainnet-beta" ? `${API_URL}/rpc` : DEFAULT_RPC[CLUSTER] || `${API_URL}/rpc`);
+/** Explorer links always use the public cluster, never the relay. */
+const EXPLORER_CLUSTER = CLUSTER;
 export const api = (path: string) => `${API_URL}${path}`;
 /** Public URL of an uploaded image (logo or banner). */
 export const imageUrl = (id: string) => `${API_URL}/uploads/${id}`;
@@ -168,7 +174,7 @@ export function explorerAddress(addr: string) {
 }
 
 export function explorerTx(sig: string) {
-  const c = CLUSTER === "mainnet-beta" ? "" : CLUSTER === "localnet" ? `?cluster=custom&customUrl=${encodeURIComponent(RPC_URL)}` : `?cluster=${CLUSTER}`;
+  const c = EXPLORER_CLUSTER === "mainnet-beta" ? "" : EXPLORER_CLUSTER === "localnet" ? `?cluster=custom&customUrl=${encodeURIComponent(RPC_URL)}` : `?cluster=${CLUSTER}`;
   return `https://explorer.solana.com/tx/${sig}${c}`;
 }
 

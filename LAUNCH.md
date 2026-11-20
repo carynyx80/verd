@@ -64,7 +64,7 @@ Remove the old `PROGRAM_ID` variable.
 | Variable | Value |
 |---|---|
 | `NEXT_PUBLIC_SOLANA_NETWORK` | `mainnet-beta` |
-| `NEXT_PUBLIC_RPC_URL` | Paid mainnet RPC URL (a separate, browser-restricted key if your provider supports it) |
+| `NEXT_PUBLIC_RPC_URL` | `<Railway URL>/rpc` (the backend relay; Solana's public RPC blocks browsers, and your paid key stays server-side) |
 | `NEXT_PUBLIC_API_URL` | The Railway public URL |
 | `NEXT_PUBLIC_COMPANY_WALLET_ADDRESS` | `jdceA46wcDNdk2SSZoZTz3MWdM95n94Fh8EXPQQrR21` |
 
