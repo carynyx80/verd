@@ -652,7 +652,7 @@ em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var
 .nav-links a.on { background: var(--text); color: var(--bg); }
 .nav-right { justify-self: end; margin-left: 0; }
 .logo { font-size: 19px; letter-spacing: -0.04em; }
-.logo-mark circle { fill: var(--bg); }
+.logo-mark circle { fill: var(--accent); }
 .wallet-adapter-button { background: var(--text) !important; color: var(--bg) !important; border-radius: 999px !important; height: 36px !important; line-height: 36px !important; padding: 0 16px !important; }
 .wallet-adapter-button:not([disabled]):hover { background: var(--text) !important; opacity: 0.85; }
 .x-link { color: var(--text-2); width: 36px; height: 36px; }

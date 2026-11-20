@@ -19,8 +19,9 @@ export const logoPng = (id: string) => `${API}/uploads/${id.replace(/\.webp$/, "
 export function Mark({ size = 40 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect x="10" y="5" width="17" height="10" rx="5" fill="#ededed" />
-      <rect x="5" y="17" width="17" height="10" rx="5" fill="#ededed" />
+      <rect x="10" y="5" width="17" height="10" rx="5" fill="#15130f" />
+      <rect x="5" y="17" width="17" height="10" rx="5" fill="#15130f" />
+      <circle cx="22" cy="10" r="2.2" fill="#2b37d4" />
     </svg>
   );
 }
