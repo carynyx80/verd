@@ -103,7 +103,7 @@ export default function LaunchPage({ params }: { params: Promise<{ id: string }>
               <h2>Prospectus</h2>
               <Prospectus text={profile.prospectus} />
               <h4 className="muted" style={{ margin: "16px 0 6px", fontSize: 13 }}>About the agent</h4>
-              <p style={{ margin: 0, color: "#c9d3cd", whiteSpace: "pre-wrap" }}>{profile.description}</p>
+              <p style={{ margin: 0, color: "var(--text-2)", whiteSpace: "pre-wrap" }}>{profile.description}</p>
             </div>
           )}
           {!profile?.hidden && <Roadshow launch={launch} profile={profile ?? null} phase={phase} />}

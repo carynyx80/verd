@@ -9,6 +9,7 @@ import Faucet from "./Faucet";
 import Logo from "./Logo";
 import OpenInWallet from "./OpenInWallet";
 import XLink, { X_URL } from "./XLink";
+import Ticker from "./Ticker";
 
 const WalletMultiButton = dynamic(
   async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
@@ -67,6 +68,7 @@ export default function Header() {
           </motion.nav>
         )}
       </AnimatePresence>
+      <Ticker />
     </header>
   );
 }

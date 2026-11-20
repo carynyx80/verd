@@ -36,6 +36,7 @@ export default function Footer() {
           </div>
         </div>
       </div>
+      <div className="wrap footer-word" aria-hidden>sipt</div>
       <div className="wrap footer-legal">
         Sipt is experimental software. Agent tokens are not investments and can lose all value. Not available where prohibited.
       </div>
