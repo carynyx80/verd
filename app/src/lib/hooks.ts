@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, fetchLaunch, fetchLaunches, type Launch } from "./stewra";
 
-// Offset between the Stewra server clock (which runs the schedule) and this device.
+// Offset between the Sipt server clock (which runs the schedule) and this device.
 // Shared across components and refreshed at most once a minute.
 let clockOffset = 0;
 let clockFetchedAt = 0;
@@ -25,7 +25,7 @@ function syncClock() {
   return clockInflight;
 }
 
-/** Current time in unix seconds, aligned to the Stewra server. */
+/** Current time in unix seconds, aligned to the Sipt server. */
 export function useNow(intervalMs = 1000) {
   const [now, setNow] = useState(() => Date.now() / 1000 + clockOffset);
   useEffect(() => {

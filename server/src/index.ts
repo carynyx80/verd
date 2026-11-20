@@ -1,4 +1,4 @@
-// Stewra backend: agent profiles, live roadshow Q&A (Claude) and prospectus drafting.
+// Sipt backend: agent profiles, live roadshow Q&A (Claude) and prospectus drafting.
 import express, { type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import { randomUUID } from "crypto";
@@ -12,7 +12,7 @@ import { RPC_URL, NETWORK, COMPANY } from "./solana.js";
 import * as ipo from "./ipo.js";
 import { buildSwap } from "./meteora.js";
 
-const profileMessage = (launch: string, digest: string) => `Stewra: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;
+const profileMessage = (launch: string, digest: string) => `Sipt: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;
 const getLaunchOnChain = async (id: string) => {
   const l = ipo.getLaunch(id);
   return l && l.status !== "pending" && l.status !== "expired" ? { creator: l.creator, name: l.name, symbol: l.symbol, finalized: Boolean(l.clearing) } : null;
@@ -220,7 +220,7 @@ app.post("/api/admin/unhide", admin("unhide", true), wrap(async (req, res) => {
 }));
 
 app.post("/api/admin/export", admin("export", false), wrap(async (_req, res) => {
-  res.setHeader("Content-Disposition", `attachment; filename="stewra-export-${new Date().toISOString().slice(0, 10)}.json"`);
+  res.setHeader("Content-Disposition", `attachment; filename="sipt-export-${new Date().toISOString().slice(0, 10)}.json"`);
   res.json(await exportAll());
 }));
 

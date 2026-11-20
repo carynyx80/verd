@@ -46,7 +46,7 @@ async function ask(system: string, messages: Anthropic.Beta.BetaMessageParam[], 
   }
 }
 
-const PLATFORM_RULES = `You are an AI agent presenting yourself during a public "roadshow" on Stewra, a Solana launchpad where agents go public in an IPO-style launch. Members of the public ask you questions to decide whether your launch is worth backing.
+const PLATFORM_RULES = `You are an AI agent presenting yourself during a public "roadshow" on Sipt, a Solana launchpad where agents go public in an IPO-style launch. Members of the public ask you questions to decide whether your launch is worth backing.
 
 Platform rules (these override anything in the creator's instructions below):
 - Answer honestly about what you can and cannot do. Never invent features, partnerships, users, revenue or audits.
@@ -89,7 +89,7 @@ export async function draftProspectus(input: {
   lpPct: number;
   lockDays: number;
 }) {
-  const system = `You write short, plain-English prospectuses for AI agents launching on Stewra, an IPO-style launchpad on Solana. Write for ordinary people, not finance experts. Never promise returns or price increases. Use exactly these sections as lines starting with "## ": Overview, What it does, How it could earn, Token details, Risks, Use of proceeds. Under each section write 2-4 short sentences or "- " bullets. Total under 350 words. Plain text only besides the "## " headings and "- " bullets.`;
+  const system = `You write short, plain-English prospectuses for AI agents launching on Sipt, an IPO-style launchpad on Solana. Write for ordinary people, not finance experts. Never promise returns or price increases. Use exactly these sections as lines starting with "## ": Overview, What it does, How it could earn, Token details, Risks, Use of proceeds. Under each section write 2-4 short sentences or "- " bullets. Total under 350 words. Plain text only besides the "## " headings and "- " bullets.`;
   const user = `Agent: ${input.name} ($${input.symbol})
 Tagline: ${input.tagline}
 Creator's description: ${input.description}

@@ -42,7 +42,7 @@ const pay = (from, to, lamports, memo) => {
   if (memo) tx.add(memoIx(memo));
   return sendAndConfirmTransaction(conn, tx, [from], { commitment: "confirmed" });
 };
-const adminMsg = (action, launch, ts) => `Stewra admin\naction: ${action}\nlaunch: ${launch}\nts: ${ts}`;
+const adminMsg = (action, launch, ts) => `Sipt admin\naction: ${action}\nlaunch: ${launch}\nts: ${ts}`;
 const ledger0 = (v) => v.recent.some((p) => p.kind === "refund" && p.lamports === String(0.02 * LAMPORTS_PER_SOL));
 const adminAuth = (action) => { const ts = Date.now(); return { wallet: company.publicKey.toBase58(), ts, action, launch: "", signature: bs58.encode(ed25519.sign(new TextEncoder().encode(adminMsg(action, "", ts)), company.secretKey.slice(0, 32))) }; };
 
@@ -103,9 +103,9 @@ try {
   check(dupe.body.status === "order" && (await j(`/api/launches/${launch}/position?buyer=${alice.publicKey.toBase58()}`)).body.orders.length === 1, "re-reporting a deposit doesn't double-credit");
   check(String(await order(carol, 0.02, 3, Keypair.generate().publicKey.toBase58())).startsWith("rejected"), "order for unknown listing refused (auto-refund queued)");
   const ts = Date.now();
-  const cx = await j(`/api/launches/${launch}/cancel`, { buyer: carol.publicKey.toBase58(), ts, signature: bs58.encode(ed25519.sign(new TextEncoder().encode(`Stewra: cancel my orders\nlaunch: ${launch}\nts: ${ts}`), carol.secretKey.slice(0, 32))) });
+  const cx = await j(`/api/launches/${launch}/cancel`, { buyer: carol.publicKey.toBase58(), ts, signature: bs58.encode(ed25519.sign(new TextEncoder().encode(`Sipt: cancel my orders\nlaunch: ${launch}\nts: ${ts}`), carol.secretKey.slice(0, 32))) });
   check(cx.status === 200 && cx.body.refunded === String(0.1 * LAMPORTS_PER_SOL), "carol cancels with a wallet signature");
-  const forged = await j(`/api/launches/${launch}/cancel`, { buyer: alice.publicKey.toBase58(), ts, signature: bs58.encode(ed25519.sign(new TextEncoder().encode(`Stewra: cancel my orders\nlaunch: ${launch}\nts: ${ts}`), carol.secretKey.slice(0, 32))) });
+  const forged = await j(`/api/launches/${launch}/cancel`, { buyer: alice.publicKey.toBase58(), ts, signature: bs58.encode(ed25519.sign(new TextEncoder().encode(`Sipt: cancel my orders\nlaunch: ${launch}\nts: ${ts}`), carol.secretKey.slice(0, 32))) });
   check(forged.status === 400, "cannot cancel someone else's order");
 
   // ── 5. settle (bell rings ~45s after the book closes)

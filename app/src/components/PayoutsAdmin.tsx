@@ -63,7 +63,7 @@ export default function PayoutsAdmin({ signed }: { signed: Signed }) {
   });
 
   const pause = (on: boolean) => run(on ? "pause" : "unpause", async () => {
-    if (on && !confirm("Pause Stewra? New filings and orders are refused (and refunded later), the bell waits, and all payouts stop.")) return;
+    if (on && !confirm("Pause Sipt? New filings and orders are refused (and refunded later), the bell waits, and all payouts stop.")) return;
     await post(on ? "/api/admin/pause" : "/api/admin/unpause", on ? "pause" : "unpause");
     await load();
   });
@@ -131,7 +131,7 @@ export default function PayoutsAdmin({ signed }: { signed: Signed }) {
 
       {data.unattributed.length > 0 && (
         <>
-          <h3 style={{ margin: 0 }}>Deposits without a Stewra order <span className="muted">{data.unattributed.length}</span></h3>
+          <h3 style={{ margin: 0 }}>Deposits without a Sipt order <span className="muted">{data.unattributed.length}</span></h3>
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>SOL sent to the company wallet without a valid order memo. Not credited to anyone; refund manually if appropriate.</p>
           <div className="admin-list">
             {data.unattributed.map((u) => (

@@ -9,7 +9,7 @@ import PayoutsAdmin from "@/components/PayoutsAdmin";
 type Report = { id: string; launch: string; reason: string; details: string; reporter?: string; at: number; resolved?: boolean };
 type Data = { reports: Report[]; hidden: Record<string, { at: number; note: string }>; names: Record<string, string> };
 
-const adminMessage = (action: string, launch: string, ts: number) => `Stewra admin\naction: ${action}\nlaunch: ${launch}\nts: ${ts}`;
+const adminMessage = (action: string, launch: string, ts: number) => `Sipt admin\naction: ${action}\nlaunch: ${launch}\nts: ${ts}`;
 
 export default function AdminPage() {
   const { publicKey, signMessage } = useWallet();
@@ -35,7 +35,7 @@ export default function AdminPage() {
         const blob = await res.blob();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `stewra-export-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `sipt-export-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         return null;
       }

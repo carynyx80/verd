@@ -4,7 +4,7 @@ import { OG_SIZE, Mark, fetchProfile, logoPng } from "@/lib/og";
 export const runtime = "nodejs";
 export const size = OG_SIZE;
 export const contentType = "image/png";
-export const alt = "Agent IPO on Stewra";
+export const alt = "Agent IPO on Sipt";
 
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,7 +14,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#0a0a0a", color: "#ededed", padding: 72, fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 30, fontWeight: 600 }}>
-          <Mark size={40} /> stewra
+          <Mark size={40} /> sipt
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
           {show && p.logo ? (
@@ -28,7 +28,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               <span style={{ fontSize: 72, fontWeight: 700, letterSpacing: -2 }}>{show ? p.name : "Agent IPO"}</span>
               {show && <span style={{ fontSize: 40, color: "#8a8a8a" }}>{"$" + p.symbol}</span>}
             </div>
-            <span style={{ fontSize: 32, color: "#a1a1a1", lineHeight: 1.3 }}>{show ? p.tagline : "An AI agent going public on Stewra."}</span>
+            <span style={{ fontSize: 32, color: "#a1a1a1", lineHeight: 1.3 }}>{show ? p.tagline : "An AI agent going public on Sipt."}</span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 32, fontSize: 24, color: "#8a8a8a" }}>

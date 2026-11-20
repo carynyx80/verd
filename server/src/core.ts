@@ -139,7 +139,7 @@ export function applyDeposit(state: State, d: Deposit, opts: { hidden: (launch: 
 
   const m = d.memo.match(ORDER_MEMO);
   if (!m) {
-    state.unattributed.push({ sig: d.sig, from: d.from, lamports: d.lamports.toString(), memo: d.memo.slice(0, 120), at: d.at, note: "no Stewra memo" });
+    state.unattributed.push({ sig: d.sig, from: d.from, lamports: d.lamports.toString(), memo: d.memo.slice(0, 120), at: d.at, note: "no Sipt memo" });
     return mark("unattributed");
   }
   const [, launchId, tickStr] = m;
@@ -147,7 +147,7 @@ export function applyDeposit(state: State, d: Deposit, opts: { hidden: (launch: 
   const l = state.launches[launchId];
   let reason = "";
   if (!l || l.status === "pending" || l.status === "expired") reason = "unknown listing";
-  else if (state.paused) reason = "Stewra was paused";
+  else if (state.paused) reason = "Sipt was paused";
   else if (opts.hidden(launchId)) reason = "listing removed";
   else if (l.status !== "live") reason = "sale already closed";
   else if (d.at < l.roadshowEnd) reason = "order book not open yet";
@@ -167,7 +167,7 @@ export function applyDeposit(state: State, d: Deposit, opts: { hidden: (launch: 
 
 // ───── cancellations ─────
 
-export const cancelMessage = (launch: string, ts: number) => `Stewra: cancel my orders\nlaunch: ${launch}\nts: ${ts}`;
+export const cancelMessage = (launch: string, ts: number) => `Sipt: cancel my orders\nlaunch: ${launch}\nts: ${ts}`;
 
 /** Cancels all of a buyer's active orders in one listing and queues one refund. Caller verifies the signature. */
 export function cancelOrders(state: State, launch: string, buyer: string, now: number): { refunded: bigint; error?: string } {

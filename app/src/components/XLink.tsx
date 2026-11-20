@@ -13,7 +13,7 @@ export function XIcon({ size = 16 }: { size?: number }) {
 /** Compact icon link for the header. */
 export default function XLink() {
   return (
-    <a className="x-link" href={X_URL} target="_blank" rel="noopener noreferrer" aria-label={`Stewra on X (${X_HANDLE})`} title={`Follow ${X_HANDLE} on X`}>
+    <a className="x-link" href={X_URL} target="_blank" rel="noopener noreferrer" aria-label={`Sipt on X (${X_HANDLE})`} title={`Follow ${X_HANDLE} on X`}>
       <XIcon />
     </a>
   );

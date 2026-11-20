@@ -150,7 +150,7 @@ export function validateFiling(f: FilingInput): string | null {
  * before it ends, so nobody but the company can ever mint. No custom program involved.
  */
 export async function prepareFiling(f: FilingInput, metadataUri: (mint: string) => string) {
-  if (isPaused()) throw new Error("Stewra is paused. New listings are temporarily disabled.");
+  if (isPaused()) throw new Error("Sipt is paused. New listings are temporarily disabled.");
   const company = requireCompany();
   const creator = new PublicKey(f.creator);
   const mint = Keypair.generate();

@@ -296,12 +296,12 @@ function SaleTerms({ launch, config }: { launch: Launch; config: PlatformConfig 
         <div><small>To liquidity</small><b>{launch.lpBps / 100}%</b></div>
       </div>
       <p className="muted" style={{ fontSize: 12, margin: "10px 0 0" }}>
-        Creator keeps {((launch.creatorSupply / launch.saleSupply) * 100).toFixed(0)}% extra tokens, held by Stewra until{" "}
+        Creator keeps {((launch.creatorSupply / launch.saleSupply) * 100).toFixed(0)}% extra tokens, held by Sipt until{" "}
         {launch.finalized ? new Date(launch.lockUntil * 1000).toLocaleString() : "the lockup ends after the bell"}. Platform fee {launch.feeBps / 100}%, trading fee {launch.swapFeeBps / 100}%.
         Pool liquidity is permanently locked on Meteora at the bell.
       </p>
       <p className="muted" style={{ fontSize: 12, margin: "8px 0 0" }}>
-        <b>Custodial:</b> orders are paid to the Stewra company wallet{config?.company ? <> (<a href={explorerAddress(config.company)} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>{short(config.company)}</a>)</> : null}, which holds them until the bell and sends tokens and refunds. <Link href="/risk" style={{ textDecoration: "underline" }}>Risks</Link>
+        <b>Custodial:</b> orders are paid to the Sipt company wallet{config?.company ? <> (<a href={explorerAddress(config.company)} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>{short(config.company)}</a>)</> : null}, which holds them until the bell and sends tokens and refunds. <Link href="/risk" style={{ textDecoration: "underline" }}>Risks</Link>
       </p>
     </div>
   );
@@ -334,9 +334,9 @@ function OrderPanel({ launch, config, pos, onChange }: { launch: Launch; config:
   async function place() {
     const lamports = Math.round(Number(amount) * LAMPORTS_PER_SOL);
     if (!(lamports >= 0.01 * LAMPORTS_PER_SOL)) throw new Error("The minimum order is 0.01 SOL.");
-    if (!config?.company) throw new Error("Couldn't reach Stewra. Try again in a moment.");
-    if (mismatch) throw new Error("Safety check failed: the server's company wallet doesn't match this site. Don't send funds; contact Stewra.");
-    if (config.paused) throw new Error("Stewra is paused. Orders are on hold.");
+    if (!config?.company) throw new Error("Couldn't reach Sipt. Try again in a moment.");
+    if (mismatch) throw new Error("Safety check failed: the server's company wallet doesn't match this site. Don't send funds; contact Sipt.");
+    if (config.paused) throw new Error("Sipt is paused. Orders are on hold.");
     const t = new Transaction().add(
       SystemProgram.transfer({ fromPubkey: publicKey!, toPubkey: new PublicKey(COMPANY_WALLET), lamports }),
       new TransactionInstruction({ programId: MEMO_PROGRAM, keys: [], data: Buffer.from(orderMemo(launch.address, tick), "utf8") }),
@@ -382,7 +382,7 @@ function OrderPanel({ launch, config, pos, onChange }: { launch: Launch; config:
       )}
       <label className="row" style={{ gap: 8, fontSize: 13, alignItems: "flex-start", flexWrap: "nowrap" }}>
         <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ marginTop: 3 }} />
-        <span className="muted">I understand my SOL goes to the Stewra company wallet, which holds it until the bell and then sends my tokens and any refund. This is custodial, not a smart contract.</span>
+        <span className="muted">I understand my SOL goes to the Sipt company wallet, which holds it until the bell and then sends my tokens and any refund. This is custodial, not a smart contract.</span>
       </label>
       {mismatch && <div className="note err">Safety check failed: the server reports a different company wallet than this site. Orders are disabled.</div>}
       <button className="btn primary" disabled={!publicKey || !agree || Boolean(mismatch) || tx.state.kind === "pending"} onClick={async () => {
@@ -465,7 +465,7 @@ function SettlingPanel({ launch }: { launch: Launch }) {
     <div className="panel">
       <h3>Bell rung · settling</h3>
       <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-        Stewra is sending tokens and refunds from the company wallet, then opening the locked pool. {total > 0 && <b className="mono">{done}/{total} done</b>}
+        Sipt is sending tokens and refunds from the company wallet, then opening the locked pool. {total > 0 && <b className="mono">{done}/{total} done</b>}
       </p>
     </div>
   );
@@ -591,7 +591,7 @@ function TradePanel({ launch }: { launch: Launch }) {
           return sig;
         }, buy ? "Bought" : "Sold")) { setAmount(""); await loadBal(); }
       }}>{publicKey ? (buy ? "Buy" : "Sell") : "Connect wallet to trade"}</button>
-      <p className="muted" style={{ fontSize: 12, margin: 0 }}>Trades go straight from your wallet to the listing&apos;s Meteora pool. Stewra never holds your funds when you trade.</p>
+      <p className="muted" style={{ fontSize: 12, margin: 0 }}>Trades go straight from your wallet to the listing&apos;s Meteora pool. Sipt never holds your funds when you trade.</p>
       <TxNote state={tx.state} />
     </div>
   );
@@ -606,7 +606,7 @@ function CreatorPanel({ launch, now }: { launch: Launch; now: number }) {
       <p className="muted" style={{ margin: 0, fontSize: 14 }}>
         {launch.creatorClaimed ? `Sent ${tokens(amount)} ${launch.symbol} to your wallet.`
           : amount === 0 ? "No creator tokens: the sale didn't complete."
-          : locked ? <>Your {tokens(amount)} {launch.symbol} are held by Stewra and sent to you automatically in <b className="mono">{countdown(launch.lockUntil, now)}</b>.</>
+          : locked ? <>Your {tokens(amount)} {launch.symbol} are held by Sipt and sent to you automatically in <b className="mono">{countdown(launch.lockUntil, now)}</b>.</>
           : `Your ${tokens(amount)} ${launch.symbol} are unlocked and being sent to your wallet.`}
       </p>
     </div>

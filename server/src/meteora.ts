@@ -1,6 +1,6 @@
 // Trading after the bell runs on Meteora DAMM v2, an existing audited Solana AMM (same program id on
 // mainnet and devnet). Each listing gets a TOKEN/SOL pool seeded at the IPO price, and the whole
-// position is permanently locked at creation, so nobody (including Stewra) can withdraw it.
+// position is permanently locked at creation, so nobody (including Sipt) can withdraw it.
 import {
   ActivationType, BaseFeeMode, CollectFeeMode, CpAmm, MAX_SQRT_PRICE, MIN_SQRT_PRICE, deriveCustomizablePoolAddress,
   getBaseFeeParams, getSqrtPriceFromPrice,
@@ -83,7 +83,7 @@ export async function getPool(mint: string): Promise<PoolInfo | null> {
   return info;
 }
 
-/** Quote and an unsigned swap transaction for the trader's own wallet to sign. Stewra never holds the trader's funds. */
+/** Quote and an unsigned swap transaction for the trader's own wallet to sign. Sipt never holds the trader's funds. */
 export async function buildSwap(p: { mint: string; trader: string; buy: boolean; amountIn: bigint; slippageBps: number }) {
   const mint = new PublicKey(p.mint), trader = new PublicKey(p.trader);
   const pool = poolAddress(mint);

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Stewra mark: two offset tokens stacking into an S. */
+/** Sipt mark: two offset tokens stacking into an S. */
 export function LogoMark({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="logo-mark">
@@ -13,9 +13,9 @@ export function LogoMark({ size = 20 }: { size?: number }) {
 
 export default function Logo({ size = 20 }: { size?: number }) {
   return (
-    <Link href="/" className="logo" aria-label="Stewra home">
+    <Link href="/" className="logo" aria-label="Sipt home">
       <LogoMark size={size} />
-      <span>stewra</span>
+      <span>sipt</span>
     </Link>
   );
 }

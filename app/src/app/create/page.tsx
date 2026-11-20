@@ -81,8 +81,8 @@ export default function CreatePage() {
 
   function validate(): string | null {
     if (!wallet) return "Connect your wallet first.";
-    if (!config) return "Couldn't reach Stewra. Try again in a moment.";
-    if (config.paused) return "Stewra is paused. New listings are on hold.";
+    if (!config) return "Couldn't reach Sipt. Try again in a moment.";
+    if (config.paused) return "Sipt is paused. New listings are on hold.";
     if (!f.name.trim() || f.name.length > 32) return "Name must be 1–32 characters.";
     if (!/^[A-Za-z0-9]{1,10}$/.test(f.symbol)) return "Ticker must be 1–10 letters or numbers.";
     if (!f.tagline.trim() || f.description.trim().length < 10) return "Add a tagline and a description.";
@@ -187,7 +187,7 @@ export default function CreatePage() {
           <Link href="/#listings">Listings</Link><span aria-hidden>/</span><span>New IPO</span>
         </nav>
         <h1>File an IPO</h1>
-        <p>Describe your agent, set the sale terms, and publish. Orders are held by the Stewra company wallet until the bell; the pool is locked on Meteora.</p>
+        <p>Describe your agent, set the sale terms, and publish. Orders are held by the Sipt company wallet until the bell; the pool is locked on Meteora.</p>
       </header>
 
       <div className="cf-grid">

@@ -2,31 +2,31 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Terms of service — Stewra" };
+export const metadata: Metadata = { title: "Terms of service — Sipt" };
 
 export default function Terms() {
   return (
-    <LegalPage title="Terms of service" intro="These terms govern your use of the Stewra website and interface. By using Stewra you agree to them.">
-      <h2>1. What Stewra is</h2>
-      <p>Stewra is a software interface for creating and participating in token launches for AI agents on the Solana blockchain. Stewra does not use its own smart contract. <b>Orders are custodial:</b> when you place an order you send SOL to the Stewra company wallet, which holds it until the bell and then sends your tokens and any refund. Creator tokens are held by Stewra during the lockup. Trading after the bell happens directly between your wallet and a third-party Meteora pool; Stewra never holds your funds when you trade. We never hold your keys.</p>
+    <LegalPage title="Terms of service" intro="These terms govern your use of the Sipt website and interface. By using Sipt you agree to them.">
+      <h2>1. What Sipt is</h2>
+      <p>Sipt is a software interface for creating and participating in token launches for AI agents on the Solana blockchain. Sipt does not use its own smart contract. <b>Orders are custodial:</b> when you place an order you send SOL to the Sipt company wallet, which holds it until the bell and then sends your tokens and any refund. Creator tokens are held by Sipt during the lockup. Trading after the bell happens directly between your wallet and a third-party Meteora pool; Sipt never holds your funds when you trade. We never hold your keys.</p>
       <h2>2. Eligibility</h2>
-      <p>You must be at least 18 and legally able to enter into these terms. You may not use Stewra if you are located in, or a resident of, a jurisdiction where its use is prohibited, or if you are subject to sanctions. Access may be restricted by location.</p>
+      <p>You must be at least 18 and legally able to enter into these terms. You may not use Sipt if you are located in, or a resident of, a jurisdiction where its use is prohibited, or if you are subject to sanctions. Access may be restricted by location.</p>
       <h2>3. Your wallet and transactions</h2>
-      <p>You are responsible for your wallet, its security and every transaction you sign. Blockchain transactions are final. We can&apos;t reverse, cancel or refund a transaction once it is confirmed, except where Stewra provides for it (cancelling an order before the order window closes, refunds for unfilled or refused orders). Stewra may refuse and refund orders, for example if a listing is removed or the service is paused.</p>
+      <p>You are responsible for your wallet, its security and every transaction you sign. Blockchain transactions are final. We can&apos;t reverse, cancel or refund a transaction once it is confirmed, except where Sipt provides for it (cancelling an order before the order window closes, refunds for unfilled or refused orders). Sipt may refuse and refund orders, for example if a listing is removed or the service is paused.</p>
       <h2>4. Creators</h2>
       <p>If you file a launch, you confirm that you have the rights to the name, logo, banner and other content you publish, that your description and prospectus are accurate and not misleading, and that you won&apos;t promise returns or profits. You are solely responsible for your agent, your token and any obligations that arise from launching it.</p>
       <h2>5. Agent tokens are not investments</h2>
       <p>Agent tokens are experimental digital tokens. They are not shares, securities, deposits or claims on any company, and they carry no rights to profits, revenue or governance. They may lose all value. Read the <Link href="/risk">risk disclosure</Link>.</p>
       <h2>6. Prohibited use</h2>
-      <p>You agree not to use Stewra to impersonate others, publish unlawful, infringing or offensive content, manipulate markets, launder money, or attempt to interfere with the interface or the company wallet.</p>
+      <p>You agree not to use Sipt to impersonate others, publish unlawful, infringing or offensive content, manipulate markets, launder money, or attempt to interfere with the interface or the company wallet.</p>
       <h2>7. Moderation</h2>
-      <p>We may hide or remove any listing or content from the Stewra interface at our discretion, for example after reports of impersonation, fraud or abuse. If a listing is hidden, new orders are refused and refunded, and existing orders are still settled or refunded.</p>
+      <p>We may hide or remove any listing or content from the Sipt interface at our discretion, for example after reports of impersonation, fraud or abuse. If a listing is hidden, new orders are refused and refunded, and existing orders are still settled or refunded.</p>
       <h2>8. AI-generated content</h2>
-      <p>Roadshow answers and draft prospectuses are generated by AI models and may be inaccurate. They are not advice and are not statements by Stewra.</p>
+      <p>Roadshow answers and draft prospectuses are generated by AI models and may be inaccurate. They are not advice and are not statements by Sipt.</p>
       <h2>9. No warranties</h2>
-      <p>Stewra is provided &quot;as is&quot; and &quot;as available&quot;, without warranties of any kind. Blockchains, third-party programs and our own systems can contain bugs or fail, and payouts can be delayed, including while the service is paused. We don&apos;t guarantee uptime, accuracy or that the interface will be error-free.</p>
+      <p>Sipt is provided &quot;as is&quot; and &quot;as available&quot;, without warranties of any kind. Blockchains, third-party programs and our own systems can contain bugs or fail, and payouts can be delayed, including while the service is paused. We don&apos;t guarantee uptime, accuracy or that the interface will be error-free.</p>
       <h2>10. Limitation of liability</h2>
-      <p>To the maximum extent permitted by law, Stewra and its contributors are not liable for any indirect, incidental or consequential losses, or for any loss of tokens, funds or profits arising from your use of Stewra.</p>
+      <p>To the maximum extent permitted by law, Sipt and its contributors are not liable for any indirect, incidental or consequential losses, or for any loss of tokens, funds or profits arising from your use of Sipt.</p>
       <h2>11. Changes</h2>
       <p>We may update these terms. Continued use after changes take effect means you accept the updated terms.</p>
       <h2>12. Contact</h2>

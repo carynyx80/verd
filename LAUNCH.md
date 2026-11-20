@@ -1,6 +1,6 @@
-# Stewra mainnet runbook (company-wallet edition)
+# Sipt mainnet runbook (company-wallet edition)
 
-Stewra runs on Solana mainnet **without deploying its own program**. It uses only programs that already exist on mainnet:
+Sipt runs on Solana mainnet **without deploying its own program**. It uses only programs that already exist on mainnet:
 
 | Need | Program (same address on mainnet and devnet) |
 |---|---|
@@ -28,7 +28,7 @@ Company wallet: `jdceA46wcDNdk2SSZoZTz3MWdM95n94Fh8EXPQQrR21` (valid address, on
 | Emergency pause | Program flag | Server flag in `/admin` or `PAYOUTS_PAUSED=1` |
 
 ### Still needs a custom program (cannot be replicated safely without one)
-- **Trustless escrow.** Only a program can hold buyers' SOL so that nobody, including Stewra, can move it except by the sale rules. With a company wallet, buyers must trust Stewra.
+- **Trustless escrow.** Only a program can hold buyers' SOL so that nobody, including Sipt, can move it except by the sale rules. With a company wallet, buyers must trust Sipt.
 - **Trustless clearing and settlement.** Anyone can recompute the price from the public deposits and the ledger, but only a program could *force* the payouts.
 - **Trustless creator lockup.** Today the company holds the creator's tokens. A vesting program could lock them without trust.
 
@@ -79,14 +79,14 @@ Optional automatic mode: set `COMPANY_WALLET_SECRET` on Railway. It's ignored un
 - turn on 2FA for Railway, GitHub and Vercel, and limit who has access.
 
 Always:
-- Use a **hardware wallet** (Ledger) for the company wallet. Never type its seed phrase into any website, chat or server. Stewra never asks for it.
-- Keep the company wallet for Stewra only, so the ledger and the balance reconcile.
+- Use a **hardware wallet** (Ledger) for the company wallet. Never type its seed phrase into any website, chat or server. Sipt never asks for it.
+- Keep the company wallet for Sipt only, so the ledger and the balance reconcile.
 - Watch **Surplus** in `/admin` (balance minus what's owed to users). It must never go negative. Don't withdraw below what's owed.
 - Keep about **0.2 SOL** of operating balance for transaction fees, pool rent and token accounts.
 - Use **Emergency pause** in `/admin` if anything looks wrong. While paused: deposits are still recorded, nothing else moves.
 - Download the ledger and state regularly (`/admin` → backup, plus `ledger.jsonl` on the volume).
 - Payout signing: process the queue at least daily, and soon after every bell. Users see "queued" until you sign.
-- Deposits without a Stewra memo appear under **Deposits without a Stewra order**. They're never credited; refund them by hand.
+- Deposits without a Sipt memo appear under **Deposits without a Sipt order**. They're never credited; refund them by hand.
 
 ## Costs
 

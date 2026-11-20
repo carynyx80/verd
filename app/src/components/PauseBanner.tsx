@@ -8,7 +8,7 @@ export default function PauseBanner() {
   return (
     <div className="pause-banner" role="status">
       <div className="wrap">
-        Stewra is paused for maintenance. New IPOs, orders and payouts from the company wallet are on hold. Funds already deposited stay recorded and will be paid out when we resume.
+        Sipt is paused for maintenance. New IPOs, orders and payouts from the company wallet are on hold. Funds already deposited stay recorded and will be paid out when we resume.
       </div>
     </div>
   );

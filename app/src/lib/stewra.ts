@@ -7,7 +7,7 @@ const DEFAULT_RPC: Record<string, string> = {
   devnet: "https://api.devnet.solana.com",
   localnet: "http://127.0.0.1:8899",
 };
-/** Base URL of the Stewra backend (Railway). */
+/** Base URL of the Sipt backend (Railway). */
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/$/, "");
 /**
  * RPC the browser uses. On mainnet this defaults to the backend relay: Solana's public mainnet RPC
@@ -83,7 +83,7 @@ export async function fetchLaunch(address: string): Promise<Launch | null> {
 
 /** Memo that attributes a deposit to a listing and a max price. Must match the server. */
 export const orderMemo = (launch: string, tick: number) => `stewra:order:${launch}:${tick}`;
-export const cancelMessage = (launch: string, ts: number) => `Stewra: cancel my orders\nlaunch: ${launch}\nts: ${ts}`;
+export const cancelMessage = (launch: string, ts: number) => `Sipt: cancel my orders\nlaunch: ${launch}\nts: ${ts}`;
 
 // ───── phases ─────
 
@@ -180,4 +180,4 @@ export function explorerTx(sig: string) {
 
 /** Message the creator signs to prove they own a launch when saving its profile. */
 export const profileMessage = (launch: string, digest: string) =>
-  `Stewra: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;
+  `Sipt: publish agent profile\nlaunch: ${launch}\ndigest: ${digest}`;

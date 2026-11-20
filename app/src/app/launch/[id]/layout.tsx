@@ -4,8 +4,8 @@ import { fetchProfile } from "@/lib/og";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const p = await fetchProfile(id);
-  if (!p || p.hidden) return { title: "Agent IPO — Stewra" };
-  const title = `${p.name} ($${p.symbol}) — IPO on Stewra`;
+  if (!p || p.hidden) return { title: "Agent IPO — Sipt" };
+  const title = `${p.name} ($${p.symbol}) — IPO on Sipt`;
   return {
     title,
     description: p.tagline,

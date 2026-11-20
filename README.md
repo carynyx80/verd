@@ -1,17 +1,17 @@
-# Stewra: IPOs for AI agents on Solana
+# Sipt: IPOs for AI agents on Solana
 
 > Anthropic went public. Now your agent can.
 
-Stewra is a launchpad where AI agents "go public" the way a company does:
+Sipt is a launchpad where AI agents "go public" the way a company does:
 
-1. **Filing**: the creator lists the agent with a prospectus, price range, supply and creator lockup. Their wallet creates the token (standard SPL token + Metaplex metadata) and hands mint authority to the Stewra company wallet in the same transaction.
+1. **Filing**: the creator lists the agent with a prospectus, price range, supply and creator lockup. Their wallet creates the token (standard SPL token + Metaplex metadata) and hands mint authority to the Sipt company wallet in the same transaction.
 2. **Roadshow**: anyone can question the agent live (powered by Claude) before orders open.
-3. **Book-building**: buyers send SOL to the **Stewra company wallet** with a memo naming the listing and the most they'll pay per token. Orders can be cancelled any time before the book closes.
+3. **Book-building**: buyers send SOL to the **Sipt company wallet** with a memo naming the listing and the most they'll pay per token. Orders can be cancelled any time before the book closes.
 4. **The bell**: rings automatically shortly after the book closes. Everyone pays **the same price**. If demand is higher than supply, each buyer gets a share proportional to their order, and unused SOL is refunded.
 5. **Trading**: part of the raise seeds a **Meteora DAMM v2** pool at the IPO price, and the position is permanently locked on-chain. The mint authority is then revoked, so the supply is fixed.
-6. **Creator lockup**: Stewra holds the creator's tokens and sends them when the lockup ends.
+6. **Creator lockup**: Sipt holds the creator's tokens and sends them when the lockup ends.
 
-**Custody.** Stewra does not deploy its own program. During a sale, user funds are held by the company wallet (`jdceA46wcDNdk2SSZoZTz3MWdM95n94Fh8EXPQQrR21`), and payouts are made by the operator. This is custodial and the site says so. Trading after the bell is wallet-to-pool and never custodial.
+**Custody.** Sipt does not deploy its own program. During a sale, user funds are held by the company wallet (`jdceA46wcDNdk2SSZoZTz3MWdM95n94Fh8EXPQQrR21`), and payouts are made by the operator. This is custodial and the site says so. Trading after the bell is wallet-to-pool and never custodial.
 
 ## What's in here
 
@@ -42,7 +42,7 @@ The price range is split into 10 price levels. Each order says "I'll spend X SOL
 ### How deposits are made safe
 - Deposits are credited only when the transaction is **finalized**, and only once per signature.
 - Attribution: the SOL sender is the buyer; the memo `stewra:order:<listing>:<price level>` names the listing.
-- Anything invalid (closed book, unknown or removed listing, too small or too large, paused) is refunded in full automatically. Transfers without a Stewra memo are logged as unattributed and never credited.
+- Anything invalid (closed book, unknown or removed listing, too small or too large, paused) is refunded in full automatically. Transfers without a Sipt memo are logged as unattributed and never credited.
 - The server also scans the company wallet's history, so a deposit is credited even if the buyer's browser closes.
 - Payouts are saved with their signature **before** broadcast, so a crash or retry can't pay twice.
 - Every credit and payment is appended to `ledger.jsonl` on the data volume.
@@ -70,4 +70,4 @@ See [LAUNCH.md](LAUNCH.md) for environment variables and the mainnet checklist.
 
 ## Naming note
 
-The product is **Stewra**. The GitHub repo (`carynyx80/verd`), the Vercel and Railway projects, and the unused `programs/verd` folder keep the `verd` name. Visitors only ever see Stewra.
+The product is **Sipt**. The GitHub repo (`carynyx80/verd`), the Vercel and Railway projects, and the unused `programs/verd` folder keep the `verd` name. Visitors only ever see Sipt.

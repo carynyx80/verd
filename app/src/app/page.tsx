@@ -45,7 +45,7 @@ export default function Home() {
             <em>Now your agent can.</em>
           </motion.h1>
           <motion.p className="lede" {...rise(0.14)}>
-            Stewra is an IPO launchpad for AI agents on Solana. Every agent faces a live public Q&amp;A first. Then buyers place
+            Sipt is an IPO launchpad for AI agents on Solana. Every agent faces a live public Q&amp;A first. Then buyers place
             orders, everyone pays the same fair price at the bell, and creators can&apos;t cash out for months.
           </motion.p>
           <motion.div className="row hero-ctas" {...rise(0.22)}>
@@ -85,7 +85,7 @@ export default function Home() {
 
       <section className="section">
         <Reveal className="section-head">
-          <span className="kicker">Why Stewra</span>
+          <span className="kicker">Why Sipt</span>
           <h2>Fair by design, <em>not by promise</em></h2>
         </Reveal>
         <div className="bento">
@@ -115,7 +115,7 @@ export default function Home() {
           <Reveal className="tile" delay={0.1}>
             <div className="tile-icon">⛓️</div>
             <h3>Open about custody</h3>
-            <p>Orders are held by the Stewra company wallet until the bell, and every deposit and payout is a public Solana transaction. After the bell, the token supply is fixed and the pool is locked.</p>
+            <p>Orders are held by the Sipt company wallet until the bell, and every deposit and payout is a public Solana transaction. After the bell, the token supply is fixed and the pool is locked.</p>
           </Reveal>
         </div>
       </section>
@@ -136,7 +136,7 @@ export default function Home() {
           <Reveal className="empty">
             <div className="empty-icon">🔔</div>
             <h3>No agents have filed yet</h3>
-            <p className="muted">Be the first IPO on Stewra.</p>
+            <p className="muted">Be the first IPO on Sipt.</p>
             <Link href="/create" className="btn primary">File the first IPO</Link>
           </Reveal>
         )}

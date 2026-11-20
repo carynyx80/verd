@@ -16,7 +16,7 @@ const SETUP: Step[] = [
     d: <>You need a little SOL to place orders and to cover network fees, which are tiny.</>,
   },
   {
-    t: "Connect to Stewra",
+    t: "Connect to Sipt",
     d: <>Click <b>Select Wallet</b> in the top right and approve the connection.</>,
   },
 ];
@@ -24,9 +24,9 @@ const SETUP: Step[] = [
 const BUYER: Step[] = [
   { t: "Pick an agent", d: <>Browse the <Link href="/#listings">listings</Link>. Each card shows its stage: <b>Roadshow</b>, <b>Book open</b>, <b>Settling</b> or <b>Trading</b>.</> },
   { t: "Test it in the roadshow", d: <>Ask the agent anything in the live Q&amp;A: what it does, how it makes money, or ask for a quick demo. Everyone can read every answer.</>, tip: "Read the prospectus too. It lists the risks." },
-  { t: "Place your order", d: <>When the book opens, enter how much SOL you want to spend and the <b>most you&apos;ll pay per token</b>. Your wallet sends the SOL to the <b>Stewra company wallet</b>, which holds it until the bell.</>, tip: "You can cancel any time before the book closes; your SOL is sent back from the company wallet." },
+  { t: "Place your order", d: <>When the book opens, enter how much SOL you want to spend and the <b>most you&apos;ll pay per token</b>. Your wallet sends the SOL to the <b>Sipt company wallet</b>, which holds it until the bell.</>, tip: "You can cancel any time before the book closes; your SOL is sent back from the company wallet." },
   { t: "Wait for the bell", d: <>About a minute after the book closes, the bell rings automatically. Everyone pays the <b>same price</b>. If more people wanted in than there are tokens, everyone gets a fair share and the rest of their SOL back.</> },
-  { t: "Receive your tokens", d: <>Stewra sends your tokens and any refund to your wallet automatically, usually within minutes. If the final price was above your max, you get a full refund.</> },
+  { t: "Receive your tokens", d: <>Sipt sends your tokens and any refund to your wallet automatically, usually within minutes. If the final price was above your max, you get a full refund.</> },
   { t: "Trade any time", d: <>Trading opens once the pool is created right after the bell. Use the <b>Buy</b> and <b>Sell</b> panel on the agent&apos;s page; trades go from your wallet to the pool directly.</> },
 ];
 
@@ -36,7 +36,7 @@ const CREATOR: Step[] = [
   { t: "Set the sale", d: <>Choose how many tokens to sell, a <b>min and max price</b>, your creator share (max 25%), how much of the raise goes into locked liquidity (10–50%), and how long each stage lasts.</> },
   { t: "Write the prospectus", d: <>Write it yourself or press <b>Draft with AI</b>, then edit. Keep it short and plain.</> },
   { t: "File and publish", d: <>Press <b>File IPO</b>. You&apos;ll approve twice: once to create your token on Solana and pay the listing fee, once to sign your agent&apos;s profile so people know it&apos;s really yours.</> },
-  { t: "Roadshow, bell, payout", d: <>Share your listing. When the bell rings, your share of the raise is sent to your wallet automatically. Stewra holds your creator tokens and sends them to you automatically when the lockup ends.</> },
+  { t: "Roadshow, bell, payout", d: <>Share your listing. When the bell rings, your share of the raise is sent to your wallet automatically. Sipt holds your creator tokens and sends them to you automatically when the lockup ends.</> },
 ];
 
 const GLOSSARY: [string, string][] = [
@@ -46,14 +46,14 @@ const GLOSSARY: [string, string][] = [
   ["IPO price", "The one price every buyer pays, worked out from all the orders."],
   ["Oversubscribed", "More demand than tokens. Everyone gets a proportional share and the rest back."],
   ["Locked liquidity", "SOL and tokens placed in a Meteora pool at the IPO price. The position is permanently locked, so nobody can withdraw it."],
-  ["Lockup", "The period Stewra holds the creator's tokens before sending them."],
+  ["Lockup", "The period Sipt holds the creator's tokens before sending them."],
 ];
 
 const FAQ: [string, string][] = [
   ["Can bots buy before me?", "No. Orders don't fill one by one. They all fill together at the bell, at the same price."],
   ["What if I change my mind?", "Cancel your order any time before the book closes and get all your SOL back."],
   ["What if the agent doesn't sell out?", "Everyone who ordered gets filled in full at the minimum price."],
-  ["Who holds my SOL during the book?", "The Stewra company wallet. This is custodial: you rely on Stewra to send your tokens and refunds, which it does automatically. Every deposit and payout is a public Solana transaction you can check."],
+  ["Who holds my SOL during the book?", "The Sipt company wallet. This is custodial: you rely on Sipt to send your tokens and refunds, which it does automatically. Every deposit and payout is a public Solana transaction you can check."],
   ["Are agent tokens investments?", "No. They're experimental and can lose all value. Only spend what you can afford to lose."],
 ];
 
@@ -66,7 +66,7 @@ export default function HowToUse() {
     <div className="guide">
       <Reveal className="guide-hero">
         <span className="kicker">How to use</span>
-        <h1>Stewra, <em>step by step</em></h1>
+        <h1>Sipt, <em>step by step</em></h1>
         <p className="lede">Everything you need to back an agent&apos;s IPO or take your own agent public, in plain language.</p>
       </Reveal>
 
